@@ -1,0 +1,51 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'sky-pie-precomputer'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=sky-pie-precomputer",
+                    "--package=sky-pie-precomputer"
+                ],
+                "filter": {
+                    "name": "sky-pie-precomputer",
+                    "kind": "bin"
+                }
+            },
+            "args": ["-r=aws",
+             "-n=network_cost_v2.csv",
+             "-s=storage_pricing.csv",
+            "-b=200",
+            "--rf=3",
+            "-o=out.txt"
+        ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'sky-pie-precomputer'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=sky-pie-precomputer",
+                    "--package=sky-pie-precomputer"
+                ],
+                "filter": {
+                    "name": "sky-pie-precomputer",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
