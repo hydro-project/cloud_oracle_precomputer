@@ -119,7 +119,7 @@ mod tests {
     use itertools::Itertools;
     use test::Bencher;
 
-    use crate::{
+    use crate::skypie_lib::{
         network_record::NetworkCostMap,
         object_store::{Cost, ObjectStore, ObjectStoreStruct},
         region::Region,

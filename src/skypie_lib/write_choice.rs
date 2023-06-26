@@ -1,4 +1,4 @@
-use crate::object_store::ObjectStore;
+use crate::skypie_lib::object_store::ObjectStore;
 
 #[derive(Clone,Debug,PartialEq,Eq,Hash)]
 pub struct WriteChoice {

@@ -1,6 +1,6 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use crate::{
+use crate::skypie_lib::{
     network_record::{NetworkRecord, NetworkRecordRaw, NetworkCostMaps},
     object_store::{ObjectStoreStruct, ObjectStoreStructRaw, ObjectStore}, region::Region,
 };

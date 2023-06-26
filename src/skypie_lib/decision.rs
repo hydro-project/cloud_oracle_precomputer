@@ -1,5 +1,5 @@
-use crate::write_choice::WriteChoice;
-use crate::read_choice::ReadChoice;
+use crate::skypie_lib::write_choice::WriteChoice;
+use crate::skypie_lib::read_choice::ReadChoice;
 
 #[derive(Clone,PartialEq,Debug)]
 pub struct Decision {

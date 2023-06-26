@@ -2,7 +2,7 @@ use std::{collections::HashMap, process::Output};
 
 use hydroflow::{hydroflow_syntax, tokio_util, tokio_stream::{wrappers::UnboundedReceiverStream, self}};
 
-use crate::{write_choice::WriteChoice, region::{Region, self}, opt_assignments::opt_assignments, merge_policies::{MergeIterator, Assignments}, object_store::ObjectStore, range::Range, decision::Decision};
+use crate::skypie_lib::{write_choice::WriteChoice, region::{Region, self}, opt_assignments::opt_assignments, merge_policies::{MergeIterator, Assignments}, object_store::ObjectStore, range::Range, decision::Decision};
 
 type CandidateInputType = (WriteChoice, Region);
 type CandidateOutputType = Decision;
@@ -72,7 +72,7 @@ pub(crate) fn candidate_policies_hydroflow(write_choice: WriteChoice, regions: &
 
 #[cfg(test)]
 mod tests {
-    use crate::{object_store::{self, ObjectStore, ObjectStoreStruct, Cost}, write_choice::WriteChoice, region::Region, decision::Decision, read_choice::ReadChoice, network_record::NetworkCostMap, candidate_policies_hydroflow::candidate_policies_hydroflow};
+    use crate::skypie_lib::{object_store::{self, ObjectStore, ObjectStoreStruct, Cost}, write_choice::WriteChoice, region::Region, decision::Decision, read_choice::ReadChoice, network_record::NetworkCostMap, candidate_policies_hydroflow::candidate_policies_hydroflow};
     extern crate test;
     use hydroflow::futures::{StreamExt, executor::block_on};
     use test::Bencher;

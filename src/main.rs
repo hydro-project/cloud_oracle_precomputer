@@ -1,34 +1,13 @@
 #![feature(test)]
 extern crate test;
 
-use clap::Parser;
-use crate::region::Region;
+mod skypie_lib;
 
-mod region;
-mod object_store;
-use crate::object_store::ObjectStore;
-
-mod merge_policies;
-mod opt_assignments;
-mod candidate_policies;
-mod candidate_policies_hydroflow;
-mod reduce_oracle;
-mod loader;
-use crate::loader::Loader;
-mod network_record;
 mod args;
-use crate::args::Args;
-mod combinations;
-mod skypie_precomputation;
-use crate::skypie_precomputation::skypie_precomputation;
 
-mod decision;
-use crate::decision::Decision;
-mod read_choice;
-use crate::read_choice::ReadChoice;
-mod write_choice;
-use crate::write_choice::WriteChoice;
-mod range;
+use clap::Parser;
+use skypie_lib::skypie_precomputation::skypie_precomputation;
+use crate::{skypie_lib::loader::Loader, args::Args};
 
 
 pub fn main() {

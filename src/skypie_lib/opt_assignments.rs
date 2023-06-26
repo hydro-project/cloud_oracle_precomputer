@@ -1,4 +1,4 @@
-use crate::{
+use crate::skypie_lib::{
     object_store::{ObjectStore, ObjectStoreStruct},
     range::Range,
     region::Region, write_choice::WriteChoice,
@@ -49,7 +49,7 @@ mod tests {
 
     use itertools::Itertools;
 
-    use crate::{object_store::{ObjectStore, ObjectStoreStruct, Cost}, region::Region, write_choice::WriteChoice, range::Range, network_record::NetworkCostMap};
+    use crate::skypie_lib::{object_store::{ObjectStore, ObjectStoreStruct, Cost}, region::Region, write_choice::WriteChoice, range::Range, network_record::NetworkCostMap};
 
     use super::opt_assignments;
 

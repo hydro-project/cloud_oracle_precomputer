@@ -1,11 +1,12 @@
 use itertools::Itertools;
 
-use crate::decision::Decision;
-use crate::object_store::ObjectStore;
-use crate::candidate_policies::candidate_policies;
-use crate::reduce_oracle::Batcher;
-use crate::region::Region;
-use crate::write_choice::WriteChoice;
+use crate::skypie_lib::{decision::Decision
+    , object_store::ObjectStore
+    , candidate_policies::candidate_policies
+    , reduce_oracle::Batcher
+    , region::Region
+    , write_choice::WriteChoice
+};
 
 
 pub fn skypie_precomputation(regions: Vec<Region>, object_stores: Vec<ObjectStore>, replication_factor: usize, batch_size: usize) -> Vec<Decision> {
@@ -72,7 +73,7 @@ pub fn skypie_precomputation(regions: Vec<Region>, object_stores: Vec<ObjectStor
 
 #[cfg(test)]
 mod tests {
-    use crate::{object_store::{ObjectStore, ObjectStoreStruct, Cost}, write_choice::WriteChoice, region::Region, decision::Decision, read_choice::ReadChoice, skypie_precomputation::skypie_precomputation, network_record::NetworkCostMap};
+    use crate::skypie_lib::{object_store::{ObjectStore, ObjectStoreStruct, Cost}, write_choice::WriteChoice, region::Region, decision::Decision, read_choice::ReadChoice, skypie_precomputation::skypie_precomputation, network_record::NetworkCostMap};
     extern crate test;
     //use test::Bencher;
 

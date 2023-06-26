@@ -1,10 +1,10 @@
 use itertools::Itertools;
 
-use crate::Decision;
-use crate::ObjectStore;
-use crate::ReadChoice;
-use crate::Region;
-use crate::WriteChoice;
+use crate::skypie_lib::decision::Decision;
+use crate::skypie_lib::object_store::ObjectStore;
+use crate::skypie_lib::read_choice::ReadChoice;
+use crate::skypie_lib::region::Region;
+use crate::skypie_lib::write_choice::WriteChoice;
 
 pub(crate) type Assignments = std::collections::HashMap<Region, Vec<(f64, ObjectStore)>>;
 //type Assignments_ref<'a> = std::collections::HashMap<Region, Vec<(f64, &'a ObjectStore)>>;
@@ -108,7 +108,7 @@ impl Iterator for MergeIterator {
 
 #[cfg(test)]
 mod tests {
-    use crate::object_store::{self, ObjectStore};
+    use crate::skypie_lib::object_store::{self, ObjectStore};
     extern crate test;
     use test::Bencher;
 

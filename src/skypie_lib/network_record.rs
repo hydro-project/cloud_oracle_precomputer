@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::Deserialize;
 
-use crate::region::Region;
+use crate::skypie_lib::region::Region;
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct NetworkRecordRaw {
