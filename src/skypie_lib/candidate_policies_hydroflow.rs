@@ -1,75 +1,101 @@
-use std::{collections::HashMap, process::Output};
+use hydroflow::{hydroflow_syntax, tokio_stream::{Stream}, bytes::{BytesMut, Bytes}, util::{deserialize_from_bytes, serialize_to_bytes}, futures::Sink};
 
-use hydroflow::{hydroflow_syntax, tokio_util, tokio_stream::{wrappers::UnboundedReceiverStream, self}};
+use crate::{skypie_lib::{write_choice::WriteChoice, opt_assignments::opt_assignments, merge_policies::{AssignmentsRef, MergeIteratorRef}, decision::{Decision, DecisionRef}, object_store::ObjectStore, range::Range}, ApplicationRegion};
 
-use crate::skypie_lib::{write_choice::WriteChoice, region::{Region, self}, opt_assignments::opt_assignments, merge_policies::{MergeIterator, Assignments}, object_store::ObjectStore, range::Range, decision::Decision};
+use super::monitor::MonitorMovingAverage;
 
-type CandidateInputType = (WriteChoice, Region);
-type CandidateOutputType = Decision;
+pub type InputType = WriteChoice;
+pub type OutputType = Decision;
 //type CandidateReturnType = tokio_stream::wrappers::ReceiverStream<CandidateOutputType>;
-type CandidateReturnType = UnboundedReceiverStream<CandidateOutputType>;
-pub(crate) fn candidate_policies_hydroflow(write_choice: WriteChoice, regions: &Vec<Region>) -> CandidateReturnType {
+//type CandidateReturnType = UnboundedReceiverStream<CandidateOutputType>;
+pub type InputConnection = std::pin::Pin<Box<dyn Stream<Item = Result<BytesMut, std::io::Error>> + Send + Sync>>;
+pub type OutputConnection = std::pin::Pin<Box<dyn Sink<Bytes, Error = std::io::Error> + Send + Sync>>;
 
-    // Input into hydroflow
-    let (input_send, input_recv) = hydroflow::util::unbounded_channel::<CandidateInputType>();
+pub fn candidate_policies_hydroflow<'a>(regions: &'static Vec<ApplicationRegion>, input: InputConnection, output: OutputConnection) -> hydroflow::scheduled::graph::Hydroflow
+{
+
+    let mut input_monitor = MonitorMovingAverage::new(1000);
+    let mut output_monitor = MonitorMovingAverage::new(1000);
     
-    // Output from hydroflow
-    // XXX: Use proper channel
-    let (output_send, output_recv) = hydroflow::util::unbounded_channel::<CandidateOutputType>();
-    /* let (output_send, output_recv) = tokio::sync::mpsc::channel::<CandidateOutputType>(1024);
-    // `PollSender` adapts the send half of the bounded channel into a `Sink`.
-    let output_send = tokio_util::sync::PollSender::new(output_send);
-    // Wrap output into a stream
-    //let output_recv = tokio_stream::wrappers::ReceiverStream::new(output_recv); */
 
-    let mut flow = hydroflow_syntax! {
-        
-        source_in = source_stream(input_recv);
+    let flow = hydroflow_syntax! {
+        source_in = source_stream(input) -> map(|x| -> InputType {deserialize_from_bytes(x.unwrap()).unwrap()})
+        -> map(|x: WriteChoice| Box::<WriteChoice>::new(x))
+        -> flat_map(|w: Box::<WriteChoice>| {regions.iter().map(move |r: &'static ApplicationRegion| (w.clone(), r) )}
+        ) -> inspect(|_|{
+            input_monitor.add_arrival_time_now();
+            input_monitor.print("Input:", Some(1000));
+            /* if input_monitor.get_count() % 1000 == 0 {
+                println!("Input: {}", input_monitor);
+            } */
+        });
+
         // Get optimal assignments of region r
-        assignments = source_in -> map(|(w, r)| {opt_assignments(w.clone(), &r).map(move |x| (w.clone(), (r.clone(),x)))}) -> flatten();
+        assignments = source_in -> flat_map(|(w, r): (Box::<WriteChoice>, &'static ApplicationRegion) | {
+            opt_assignments(w.clone(), r).map(move |x| {(w.clone(), (r,x))} )
+        });
         //-> inspect(|x|{println!("Assignments: {:?}", x);});
 
         // Convert to (upper bound, object store) pairs 
-        //let assignments = assignments.map(|(o, range)|(range.max, o));
-        converted_assignments = assignments -> map(|(write_choice, (r, (o, range)))|(write_choice, (r, (range.max, o))));
+        //converted_assignments = assignments -> map(|(w, (r, (o, range)))| { (w, (r.clone(), (range.max, o)))});
+        converted_assignments = assignments -> map(|(w, (r, (o, range))): (Box<WriteChoice>, (&'static ApplicationRegion, (ObjectStore, Range)))| { (w, (r, (range.max, o)))});
         //-> inspect(|x|{println!("Converted assignments: {:?}", x);});
 
         // / Merge iterator
         // Unpack MergeIterator to HydroFlow?
 
         // Collect assignments per write choice
-        assignments_acc = converted_assignments -> fold_keyed(||{Assignments::new()}, |acc: &mut Assignments, (r, val)|{
+        /* assignments_acc = converted_assignments -> fold_keyed(||{Assignments::new()}, |acc: &mut Assignments, (r, val)|{
+            let v = acc.entry(r).or_insert(vec![]);
+            v.push(val);
+        }); */
+        assignments_acc = converted_assignments -> fold_keyed(||{AssignmentsRef::new()}, |acc: &mut AssignmentsRef, (r, val)|{
             let v = acc.entry(r).or_insert(vec![]);
             v.push(val);
         });
         //-> inspect(|x|{println!("Accumulated assignments: {:?}", x);});
 
         // Create merge iterator
-        merge_iterator = assignments_acc -> flat_map(|(write_choice, assignments)| {
-            MergeIterator::new(write_choice, assignments)
+        merge_iterator = assignments_acc -> flat_map(|(write_choice, assignments):(Box<WriteChoice>, _)| {
+            //MergeIterator::new(write_choice, assignments)
+            MergeIteratorRef::new(write_choice, assignments)
         });
         //-> inspect(|x|{println!("Merge iterator: {:?}", x);});
 
-        //merge_iterator -> dest_sink(output_send);
-        merge_iterator -> for_each(|x| {
-            let _ = output_send.send(x);
-        });
+        //merge_iterator -> for_each(|x| {let _ = output_send.send(x);});
+        merge_iterator -> inspect(|_|{
+            output_monitor.add_arrival_time_now();
+            if output_monitor.get_count() % 1000 == 0 {
+                println!("Candidates out: {}", output_monitor);
+            }
+        })
+        // Push into reduce_oracle
+        -> map(|x: DecisionRef|{
+            //x.write_choice
+            
+            let b = serialize_to_bytes(x.clone());
+            //let des = deserialize_from_bytes::<Decision>(b.as_ref()).unwrap();
+            //let eq = x == des;
+            debug_assert_eq!(x, deserialize_from_bytes::<Decision>(b.as_ref()).unwrap());
+            b
+        })
+        -> dest_sink(output);
 
     };
 
-    println!("Sending regions");
+   /*  println!("Sending regions");
     // XXX: Properly async execution
     for region in regions {
         let _ = input_send.send((write_choice.clone(), region.clone()));
         //println!("Sent region: {:?}", region);
     }
-    flow.run_available();
+    flow.run_available(); */
 
-    return output_recv;
+    return flow;
 
 }
 
-
+/* 
 #[cfg(test)]
 mod tests {
     use crate::skypie_lib::{object_store::{self, ObjectStore, ObjectStoreStruct, Cost}, write_choice::WriteChoice, region::Region, decision::Decision, read_choice::ReadChoice, network_record::NetworkCostMap, candidate_policies_hydroflow::candidate_policies_hydroflow};
@@ -139,4 +165,4 @@ mod tests {
             })
         });
     }
-}
+} */

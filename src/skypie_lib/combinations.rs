@@ -1,11 +1,12 @@
-struct Combinations<'a, T> {
+pub struct Combinations<'a, T> {
     pool: &'a [T],
     indices: Vec<usize>,
     first: bool,
 }
 
+#[allow(dead_code)]
 impl<'a, T> Combinations<'a, T> {
-    fn new(pool: &'a [T], r: usize) -> Self {
+    pub fn new(pool: &'a [T], r: usize) -> Self {
         Self {
             pool,
             indices: (0..r).collect(),
@@ -39,6 +40,7 @@ impl<'a, T> Iterator for Combinations<'a, T> {
     }
 }
 
+#[allow(dead_code)]
 pub fn combinations_recursive_bulk<'a, T: Clone + Copy>(pool: &[T], r: usize) -> Vec<Vec<T>> {
     if r == 0 {
         return vec![vec![]];
@@ -57,6 +59,7 @@ pub fn combinations_recursive_bulk<'a, T: Clone + Copy>(pool: &[T], r: usize) ->
     res
 }
 
+#[allow(dead_code)]
 pub fn combinations_recursive_closure<'a, T: Clone + Copy, F>(pool: &[T], r: usize, f: &mut F )
     where F: FnMut(Vec<T>) {
 
@@ -70,6 +73,7 @@ pub fn combinations_recursive_closure<'a, T: Clone + Copy, F>(pool: &[T], r: usi
     }
 }
 
+#[allow(dead_code)]
 fn combinations_recursive_closure_internal<'a, T: Clone + Copy, F>(pool: &[T], r: usize, f: &mut F, temp_combination: &mut Vec<T>)
     where F: FnMut(Vec<T>) {
 
@@ -121,7 +125,7 @@ mod tests {
 
     use crate::skypie_lib::{
         network_record::NetworkCostMap,
-        object_store::{Cost, ObjectStore, ObjectStoreStruct},
+        object_store::{Cost, ObjectStore},
         region::Region,
     };
 
@@ -136,58 +140,68 @@ mod tests {
         let mut cost1 = Cost::new(10.0, "get request");
         let egress_cost = NetworkCostMap::from_iter(vec![(
             Region {
+                id: 0,
                 name: "0".to_string(),
             },
             1.0,
         )]);
         cost1.add_egress_costs(egress_cost);
-        let o1 = ObjectStore::new(ObjectStoreStruct {
+        //let o1 = ObjectStore::new(ObjectStoreStruct {
+        let o1 = ObjectStore {
             id: 0,
             cost: cost1,
             region: Region {
+                id: 0,
                 name: "".to_string(),
             },
             name: "".to_string(),
-        });
+        };
 
         let mut cost2 = Cost::new(2.0, "get request");
         let egress_cost = NetworkCostMap::from_iter(vec![(
             Region {
+                id: 0,
                 name: "0".to_string(),
             },
             2.0,
         )]);
         cost2.add_egress_costs(egress_cost);
-        let o2 = ObjectStore::new(ObjectStoreStruct {
+        //let o2 = ObjectStore::new(ObjectStoreStruct {
+        let o2 = ObjectStore {
             id: 1,
             cost: cost2,
             region: Region {
+                id: 1,
                 name: "".to_string(),
             },
             name: "".to_string(),
-        });
+        };
 
         let mut cost3 = Cost::new(2.0, "get request");
         let egress_cost = NetworkCostMap::from_iter(vec![(
             Region {
+                id: 0,
                 name: "0".to_string(),
             },
             2.0,
         )]);
         cost3.add_egress_costs(egress_cost);
-        let o3 = ObjectStore::new(ObjectStoreStruct {
+        //let o3 = ObjectStore::new(ObjectStoreStruct {
+        let o3 = ObjectStore {
             id: 2,
             cost: cost3,
             region: Region {
+                id: 42,
                 name: "".to_string(),
             },
             name: "".to_string(),
-        });
+        };
 
         let object_stores = vec![o1.clone(), o2.clone(), o3.clone()];
 
         let combinator = Combinations::new(&object_stores, replication_factor);
-        let combinations: Vec<Vec<&Box<ObjectStoreStruct>>> = combinator.collect();
+        //let combinations: Vec<Vec<&Box<ObjectStoreStruct>>> = combinator.collect();
+        let combinations: Vec<Vec<&ObjectStore>> = combinator.collect();
         println!("{:?}", combinations);
 
         assert_eq!(combinations.len(), 3);
@@ -212,19 +226,22 @@ mod tests {
                 let mut cost = Cost::new(10.0, "get request");
                 let egress_cost = NetworkCostMap::from_iter(vec![(
                     Region {
+                        id: 0,
                         name: "0".to_string(),
                     },
                     1.0,
                 )]);
                 cost.add_egress_costs(egress_cost);
-                let o = ObjectStore::new(ObjectStoreStruct {
+                //let o = ObjectStore::new(ObjectStoreStruct {
+                let o = ObjectStore{
                     id: i,
                     cost: cost,
                     region: Region {
+                        id: 42,
                         name: "".to_string(),
                     },
                     name: "".to_string(),
-                });
+                };
                 return o;
             })
             .collect();
@@ -268,9 +285,6 @@ mod tests {
                     };
                     combinations_recursive_closure(&object_store_refs, replication_factor, &mut f);
                     return res;
-                }
-                _ => {
-                    panic!("bulk must be 0 or 1");
                 }
             }
             

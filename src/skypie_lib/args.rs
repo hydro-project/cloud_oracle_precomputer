@@ -8,7 +8,7 @@ pub struct Args {
     pub region_selector: String,
 
     /// Replication factor
-    #[clap(long = "rf")]
+    #[clap(long)]
     pub replication_factor: usize,
 
     /// Output file name

@@ -1,5 +1,3 @@
-use itertools::Itertools;
-
 use crate::skypie_lib::decision::Decision;
 
 pub struct Batcher<Iter>

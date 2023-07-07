@@ -1,11 +1,13 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
+use crate::ApplicationRegion;
 use crate::skypie_lib::network_record::NetworkCostMap;
 use crate::skypie_lib::{region::Region, range::Range};
+use std::collections::HashMap;
 use std::f64::{NEG_INFINITY,INFINITY};
 use std::hash::{Hash, Hasher};
 
-#[derive(Clone,Debug)]
+#[derive(Clone,Debug, Deserialize, Serialize)]
 pub struct Cost {
     pub size_cost: f64,
     pub put_cost: f64,
@@ -41,11 +43,24 @@ impl Cost {
         return cost;
     }
 
-    pub fn get_egress_cost(&self, region: &Region) -> f64 {
-        *self.egress_cost.get(&region).unwrap()
+    /*
+    Return the egress costs between an object store an the application region
+    XXX: Ignoring application region's ingress costs, since always 0
+    */
+    pub fn get_egress_cost(&self, region: &ApplicationRegion, _object_store_region: &Region) -> f64 {
+
+        *self.egress_cost.get(&region.region).unwrap()
     }
 
-    fn maxNetworkCosts(o: NetworkCostMap, p: NetworkCostMap, o_transfer_cost: f64, p_transfer_cost: f64) -> NetworkCostMap {
+    /*
+    Return the ingress costs between an object store an the application region
+    */
+    pub fn get_ingress_cost(&self, region: &ApplicationRegion, object_store_region: &Region) -> f64 {
+        *self.ingress_cost.get(&region.region).unwrap() + region.get_egress_cost(object_store_region)
+    }
+
+    #[allow(dead_code)]
+    fn max_network_costs(o: NetworkCostMap, p: NetworkCostMap, o_transfer_cost: f64, p_transfer_cost: f64) -> NetworkCostMap {
         if o.len() == 0 {
             p
         }
@@ -78,7 +93,7 @@ impl Cost {
         }
         
         self.ingress_cost = ingress_cost;
-        self.egress_cost = NetworkCostMap::new();
+        //self.egress_cost = NetworkCostMap::new();
     }
 
     pub fn add_egress_costs(&mut self, mut egress_cost: NetworkCostMap) {
@@ -87,6 +102,12 @@ impl Cost {
             *cost = (*cost) + self.get_transfer;
         }
         self.egress_cost = egress_cost;
+    }
+}
+
+impl Default for Cost {
+    fn default() -> Self {
+        Cost { size_cost: 0.0, put_cost: 0.0, put_transfer: 0.0, get_cost: 0.0, get_transfer: 0.0, egress_cost: HashMap::default(), ingress_cost: HashMap::default() }
     }
 }
 
@@ -111,7 +132,7 @@ pub struct ObjectStoreStructRaw
 
 impl From<ObjectStoreStructRaw> for ObjectStoreStruct {
     fn from(raw: ObjectStoreStructRaw) -> Self {
-        let region = Region{name: format!("{}-{}", raw.vendor, raw.region)};
+        let region = Region{id: u16::MAX, name: format!("{}-{}", raw.vendor, raw.region)};
         let name = format!("{}-{}", raw.name, raw.tier);
         let cost: Cost = Cost::new(raw.price_per_unit, &raw.group);
         Self {
@@ -123,7 +144,7 @@ impl From<ObjectStoreStructRaw> for ObjectStoreStruct {
     }
 }
 
-#[derive(Clone,Debug)]
+#[derive(Clone,Debug, serde::Serialize, serde::Deserialize)]
 pub struct ObjectStoreStruct {
     pub id: u16,
     pub region: Region,
@@ -147,18 +168,25 @@ impl Hash for ObjectStoreStruct {
     }
 }
 
-pub type ObjectStore = Box<ObjectStoreStruct>;
+//pub type ObjectStore = Box<ObjectStoreStruct>;
+pub type ObjectStore = ObjectStoreStruct;
 type OptRange = (ObjectStore, Range);
 
 // Implement slo compatibility check
 impl ObjectStoreStruct {
     pub fn new(id: u16) -> ObjectStore {
-        ObjectStore::new(ObjectStoreStruct {
+        ObjectStoreStruct {
+            id: id,
+            name: String::from(""),
+            region: Region::default(),
+            cost: Cost { size_cost: 0.0, put_cost: 0.0, put_transfer: 0.0, get_cost: 0.0, get_transfer: 0.0, egress_cost: NetworkCostMap::new(), ingress_cost: NetworkCostMap::new() }
+        }
+        /* ObjectStore::new(ObjectStoreStruct {
             id: id,
             name: String::from(""),
             region: Region { name: String::from("") },
             cost: Cost { size_cost: 0.0, put_cost: 0.0, put_transfer: 0.0, get_cost: 0.0, get_transfer: 0.0, egress_cost: NetworkCostMap::new(), ingress_cost: NetworkCostMap::new() }
-        })
+        }) */
     }
 
     pub fn is_compatible_with(&self, _r: &Region) -> bool {
@@ -169,14 +197,14 @@ impl ObjectStoreStruct {
     /* pub fn cost(&self, get: &f64, egress: &Vec<f64>) -> f64 {
         self.get_cost * get + self.egress_cost * egress
     } */
-    pub fn cost_probe(&self, size: &f64, region: &Region) -> f64 {
-        let egress_costs = self.cost.get_egress_cost(region);
+    pub fn cost_probe(&self, size: &f64, region: &ApplicationRegion) -> f64 {
+        let egress_costs = self.get_egress_cost(&region);
         self.cost.get_cost + egress_costs * size
     }
     // Implement cost delta between two object stores
-    pub fn cost_delta(&self, other: &ObjectStoreStruct, region: &Region) -> f64 {
-        let self_egress_cost = self.cost.get_egress_cost(region);
-        let other_egress_cost = other.cost.get_egress_cost(region);
+    pub fn cost_delta(&self, other: &ObjectStoreStruct, region: &ApplicationRegion) -> f64 {
+        let self_egress_cost = self.get_egress_cost(region);
+        let other_egress_cost = other.get_egress_cost(region);
         (self.cost.get_cost - other.cost.get_cost) / (other_egress_cost - self_egress_cost)
     }
 
@@ -186,11 +214,12 @@ impl ObjectStoreStruct {
     // of the object store with the region
     // Define type as generic
     
-    pub fn intersect(o: ObjectStore, p: ObjectStore, r: &Region) -> [OptRange; 2] {
+    pub fn intersect(o: ObjectStore, p: ObjectStore, r: &ApplicationRegion) -> [OptRange; 2] {
 
+        // Note: Egress = Egress of object store + ingress of application region
         // XXX: prevent hashmap lookup and use get instead
-        let o_egress_cost = o.cost.get_egress_cost(r);
-        let p_egress_cost = p.cost.get_egress_cost(r);
+        let o_egress_cost = o.get_egress_cost(&r);
+        let p_egress_cost = p.get_egress_cost(&r);
 
         // Prevent division by zero
         if o_egress_cost == p_egress_cost {
@@ -216,5 +245,23 @@ impl ObjectStoreStruct {
         else {
             return [(p, Range{min:NEG_INFINITY, max:size}), (o, Range{min:size, max:INFINITY})]
         }
+
+    }
+
+    pub fn get_egress_cost(&self, region: &ApplicationRegion) -> f64 {
+        self.cost.get_egress_cost(region, &self.region)
+    }
+
+    /*
+    Return the ingress costs between an object store an the application region
+    */
+    pub fn get_ingress_cost(&self, region: &ApplicationRegion) -> f64 {
+        self.cost.get_ingress_cost(region, &self.region)
+    }
+}
+
+impl Default for ObjectStore {
+    fn default() -> Self {
+        ObjectStore{id: u16::MAX, name: "".to_string(), cost: Cost::default(), region: Region::default()}
     }
 }

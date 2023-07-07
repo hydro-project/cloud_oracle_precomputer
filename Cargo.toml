@@ -7,13 +7,30 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.0.29", features = [ "derive" ] }
-hydroflow = { git = "https://github.com/hydro-project/hydroflow"}
+hydroflow = { git = "https://github.com/hydro-project/hydroflow", features = [ "cli_integration", "python"]}
 serde = { version = "1", features = [ "derive" ] }
 chrono = { version = "0.4.20", features = [ "serde" ], default-features = true }
 csv = "1.1"
 itertools = "0.10.5"
 regex = "1.5.4"
 tokio = { version = "1", features = ["full"] }
+#hydroflow_cli_integration = "0.1.1"
+pyo3 = { version = "^0.18", features = ["auto-initialize"] }
+numpy = "^0.18"
+widestring = "1.0.2"
+which = "4.4.0"
+lazy_static = "1.4.0"
+
+#[dependencies.pyo3]
+#version = "0.18.3"
+#features = ["auto-initialize"]
 
 [dev-dependencies]
 criterion = "0.3"
+
+[lib]
+name = "skypie_lib"
+path = "src/lib.rs"
+
+[[example]]
+name = "candidate_policies_launch"

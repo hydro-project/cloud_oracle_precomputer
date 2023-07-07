@@ -1,13 +1,13 @@
 #![feature(test)]
 extern crate test;
 
-mod skypie_lib;
+//mod skypie_lib;
+extern crate skypie_lib;
 
-mod args;
+//mod args;
 
 use clap::Parser;
-use skypie_lib::skypie_precomputation::skypie_precomputation;
-use crate::{skypie_lib::loader::Loader, args::Args};
+use skypie_lib::{skypie_precomputation, Loader, Args};
 
 
 pub fn main() {
@@ -16,7 +16,7 @@ pub fn main() {
 
     let loader = Loader::new(&args.network_file, &args.object_store_file, &args.region_selector);
     
-    let regions = loader.regions;
+    let regions = loader.app_regions;
     let object_stores = loader.object_stores;
     let replication_factor = args.replication_factor;
     let batch_size = args.batch_size;

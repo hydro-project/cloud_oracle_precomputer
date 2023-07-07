@@ -28,8 +28,8 @@ impl From<NetworkRecordRaw> for NetworkRecord {
         let dest_name = format!("{}-{}", raw.dest_vendor, raw.dest_region);
 
         Self {
-            src: Region{name:src_name},
-            dest: Region{name:dest_name},
+            src: Region{id: u16::MAX, name:src_name},
+            dest: Region{id: u16::MAX, name:dest_name},
             cost: raw.cost,
         }
     }

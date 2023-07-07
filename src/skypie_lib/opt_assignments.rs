@@ -1,18 +1,17 @@
-use crate::skypie_lib::{
+use crate::{skypie_lib::{
     object_store::{ObjectStore, ObjectStoreStruct},
-    range::Range,
-    region::Region, write_choice::WriteChoice,
-};
+    range::Range, write_choice::WriteChoice,
+}, ApplicationRegion};
 use itertools::Itertools;
 use std::{collections::HashMap};
 
-pub(crate) fn opt_assignments(write_choice: WriteChoice, region: &Region) -> std::vec::IntoIter<(ObjectStore, Range)> {
+pub(crate) fn opt_assignments(write_choice: Box::<WriteChoice>, region: &ApplicationRegion) -> std::vec::IntoIter<(ObjectStore, Range)> {
     
     debug_assert_ne!(write_choice.object_stores.len(), 0);
 
     let compat = write_choice.object_stores
         .into_iter()
-        .filter(|s| s.is_compatible_with(&region));
+        .filter(|s| s.is_compatible_with(&region.region));
     // Generate combinations of object stores
     let c = compat
         .tuple_combinations();
@@ -45,11 +44,11 @@ pub(crate) fn opt_assignments(write_choice: WriteChoice, region: &Region) -> std
 
 #[cfg(test)]
 mod tests {
-    use std::{f64::NEG_INFINITY, f64::INFINITY};
+    use std::{f64::NEG_INFINITY, f64::INFINITY, collections::HashMap};
 
     use itertools::Itertools;
 
-    use crate::skypie_lib::{object_store::{ObjectStore, ObjectStoreStruct, Cost}, region::Region, write_choice::WriteChoice, range::Range, network_record::NetworkCostMap};
+    use crate::skypie_lib::{object_store::{ObjectStore, Cost}, region::Region, write_choice::WriteChoice, range::Range, network_record::NetworkCostMap};
 
     use super::opt_assignments;
 
@@ -57,14 +56,16 @@ mod tests {
     #[test]
     fn test_opt_assignments() {
         let mut cost1 = Cost::new(10.0, "get request");
-        let egress_cost = NetworkCostMap::from_iter(vec![(Region{name:"0".to_string()}, 1.0)]);
+        let egress_cost = NetworkCostMap::from_iter(vec![(Region{id: 0, name:"0".to_string()}, 1.0)]);
         cost1.add_egress_costs(egress_cost);
-        let o1 = ObjectStore::new(ObjectStoreStruct{id: 0, cost: cost1, region: Region { name: "".to_string()}, name: "".to_string()});
+        //let o1 = ObjectStore::new(ObjectStoreStruct{id: 0, cost: cost1, region: Region { name: "".to_string()}, name: "".to_string()});
+        let o1 = ObjectStore{id: 0, cost: cost1, region: Region {id: u16::MAX, name: "".to_string()}, name: "".to_string()};
         
         let mut cost2 = Cost::new(2.0, "get request");
-        let egress_cost = NetworkCostMap::from_iter(vec![(Region{name:"0".to_string()}, 2.0)]);
+        let egress_cost = NetworkCostMap::from_iter(vec![(Region{id: 0, name:"0".to_string()}, 2.0)]);
         cost2.add_egress_costs(egress_cost);
-        let o2 = ObjectStore::new(ObjectStoreStruct{id: 1, cost: cost2, region: Region { name: "".to_string()}, name: "".to_string()});
+        //let o2 = ObjectStore::new(ObjectStoreStruct{id: 1, cost: cost2, region: Region { name: "".to_string()}, name: "".to_string()});
+        let o2 = ObjectStore{id: 1, cost: cost2, region: Region {id: u16::MAX, name: "".to_string()}, name: "".to_string()};
 
         let write_choice = WriteChoice{
             object_stores: vec![
@@ -73,8 +74,8 @@ mod tests {
             ]
         };
 
-        let region = Region{name: "0".to_string()};
-        let res: Vec::<(ObjectStore, Range)> = opt_assignments(write_choice, &region).sorted_by(|(a,_), (b,_)|Ord::cmp(&a.id, &b.id)).collect();
+        let region = crate::ApplicationRegion { region: Region{id: 0, name: "0".to_string()}, egress_cost: HashMap::default(), ingress_cost: HashMap::default()};
+        let res: Vec::<(ObjectStore, Range)> = opt_assignments(Box::<WriteChoice>::new(write_choice), &region).sorted_by(|(a,_), (b,_)|Ord::cmp(&a.id, &b.id)).collect();
         res.iter().for_each(|(id, r)| println!("{:?}: ({:?}, {:?})", id, r.min, r.max));
         
         assert_eq!(res.len(), 2);

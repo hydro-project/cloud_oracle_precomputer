@@ -1,10 +1,9 @@
-use std::{collections::HashMap, process::Output};
+use std::{collections::HashMap};
 
-use hydroflow::{hydroflow_syntax, tokio_util, tokio_stream::{wrappers::UnboundedReceiverStream, self}};
+use crate::{skypie_lib::{write_choice::WriteChoice, opt_assignments::opt_assignments, merge_policies::{MergeIterator}, object_store::ObjectStore}, ApplicationRegion};
 
-use crate::skypie_lib::{write_choice::WriteChoice, region::{Region, self}, opt_assignments::opt_assignments, merge_policies::{MergeIterator, Assignments}, object_store::ObjectStore, range::Range, decision::Decision};
-
-pub(crate) fn candidate_policies(write_choice: WriteChoice, regions: &Vec<Region>) -> MergeIterator {
+pub(crate) fn candidate_policies(write_choice: WriteChoice, regions: &Vec<ApplicationRegion>) -> MergeIterator {
+    let write_choice = Box::<WriteChoice>::new(write_choice);
     let assignments = regions.iter().map(|r|{
         // Get optimal assignments of region r
         let assignments = opt_assignments(write_choice.clone(), r);
@@ -24,9 +23,11 @@ pub(crate) fn candidate_policies(write_choice: WriteChoice, regions: &Vec<Region
 
 #[cfg(test)]
 mod tests {
-    use crate::skypie_lib::{object_store::{self, ObjectStore, ObjectStoreStruct, Cost}, write_choice::WriteChoice, region::Region, decision::Decision, read_choice::ReadChoice, network_record::NetworkCostMap};
+    use std::collections::HashMap;
+
+    use crate::{skypie_lib::{object_store::{self, ObjectStore, Cost}, write_choice::WriteChoice, region::Region, decision::Decision, read_choice::ReadChoice, network_record::NetworkCostMap}, ApplicationRegion};
     extern crate test;
-    use hydroflow::futures::{StreamExt, executor::block_on};
+    use itertools::Itertools;
     use test::Bencher;
 
     use super::candidate_policies;
@@ -34,15 +35,16 @@ mod tests {
     #[test]
     fn test_candidate_policies() {
         let mut cost1 = Cost::new(10.0, "get request");
-        let egress_cost = NetworkCostMap::from_iter(vec![(Region{name:"0".to_string()}, 1.0)]);
+        let egress_cost = NetworkCostMap::from_iter(vec![(Region{id: 0, name:"0".to_string()}, 1.0)]);
         cost1.add_egress_costs(egress_cost);
         
-        let o1 = ObjectStore::new(ObjectStoreStruct{id: 0, cost: cost1, region: Region { name: "".to_string()}, name: "".to_string()});
+        //let o1 = ObjectStore::new(ObjectStoreStruct{id: 0, cost: cost1, region: Region { name: "".to_string()}, name: "".to_string()});
+        let o1 = ObjectStore{id: 0, cost: cost1, region: Region {id: 0, name: "".to_string()}, name: "".to_string()};
         
         let mut cost2 = Cost::new(2.0, "get request");
-        let egress_cost = NetworkCostMap::from_iter(vec![(Region{name:"0".to_string()}, 2.0)]);
+        let egress_cost = NetworkCostMap::from_iter(vec![(Region{id: 0, name:"0".to_string()}, 2.0)]);
         cost2.add_egress_costs(egress_cost);
-        let o2 = ObjectStore::new(ObjectStoreStruct{id: 1, cost: cost2, region: Region { name: "".to_string()}, name: "".to_string()});
+        let o2 = ObjectStore{id: 1, cost: cost2, region: Region {id: 0, name: "".to_string()}, name: "".to_string()};
 
         let write_choice = WriteChoice{
             object_stores: vec![
@@ -51,14 +53,15 @@ mod tests {
             ]
         };
 
-        let region = vec![Region{name: "0".to_string()}];
-        let res: Vec<Decision> = candidate_policies(write_choice.clone(), &region).collect();
+        let region = vec![Region{id: 0, name: "0".to_string()}];
+        let app_region = region.iter().map(|region| ApplicationRegion{region: region.clone(), egress_cost:HashMap::default(), ingress_cost: HashMap::default()}).collect_vec();
+        let res: Vec<Decision> = candidate_policies(write_choice.clone(), &app_region).collect();
         
         assert_eq!(res.len(), 2);
         assert_eq!(res[0].write_choice, write_choice);
-        assert_eq!(res[0].read_choice, ReadChoice::from_iter(vec![(region[0].clone(), o2.clone())]));
+        assert_eq!(res[0].read_choice, ReadChoice::from_iter(vec![(app_region[0].clone(), o2.clone())]));
         assert_eq!(res[1].write_choice, write_choice);
-        assert_eq!(res[1].read_choice, ReadChoice::from_iter(vec![(region[0].clone(), o1.clone())]));
+        assert_eq!(res[1].read_choice, ReadChoice::from_iter(vec![(app_region[0].clone(), o1.clone())]));
         
     }
 
@@ -69,15 +72,16 @@ mod tests {
         let read_choice_size = 200;
 
         let read_choice_size = test::black_box(read_choice_size);
-        let regions: Vec<super::Region> = (0..read_choice_size).map(|x| super::Region{name: x.to_string()}).collect();
+        let regions: Vec<Region> = (0..read_choice_size).map(|x| Region{id: x, name: x.to_string()}).collect();
+        let app_regions = regions.iter().map(|region| ApplicationRegion{region: region.clone(), egress_cost:HashMap::default(), ingress_cost: HashMap::default()}).collect_vec();
 
         let write_choice_size = test::black_box(write_choice_size);
         let mut cost = Cost::new(1.0, "get request");
         let egress_cost = NetworkCostMap::from_iter(regions.iter().map(|r| (r.clone(), 1.0)));
         cost.add_egress_costs(egress_cost);
         let object_stores: Vec<object_store::ObjectStore> = (0..write_choice_size)
-            .map(|x| object_store::ObjectStoreStruct{name: x.to_string(), id:x, region: Region { name: "regionX".to_string() }, cost: cost.clone()})
-            .map(|x| ObjectStore::new(x))
+            .map(|x| object_store::ObjectStoreStruct{name: x.to_string(), id:x, region: Region {id: 42, name: "regionX".to_string() }, cost: cost.clone()})
+            //.map(|x| ObjectStore::new(x))
             .collect();
 
 
@@ -87,7 +91,7 @@ mod tests {
 
         println!("Benchmarking candidate_policies with {} write choices and {} read choices", write_choice_size, read_choice_size);
         b.iter(|| {
-            let res: Vec<Decision> = candidate_policies(write_choice.clone(), &regions).collect();
+            let res: Vec<Decision> = candidate_policies(write_choice.clone(), &app_regions).collect();
             
             return  res;
         });

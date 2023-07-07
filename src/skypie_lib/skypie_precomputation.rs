@@ -1,15 +1,14 @@
 use itertools::Itertools;
 
-use crate::skypie_lib::{decision::Decision
+use crate::{skypie_lib::{decision::Decision
     , object_store::ObjectStore
     , candidate_policies::candidate_policies
     , reduce_oracle::Batcher
-    , region::Region
     , write_choice::WriteChoice
-};
+}, ApplicationRegion};
 
 
-pub fn skypie_precomputation(regions: Vec<Region>, object_stores: Vec<ObjectStore>, replication_factor: usize, batch_size: usize) -> Vec<Decision> {
+pub fn skypie_precomputation(regions: Vec<ApplicationRegion>, object_stores: Vec<ObjectStore>, replication_factor: usize, batch_size: usize) -> Vec<Decision> {
     
     println!("Regions {:?}", regions.len());
     println!("Object stores {:?}", object_stores.len());
@@ -73,7 +72,9 @@ pub fn skypie_precomputation(regions: Vec<Region>, object_stores: Vec<ObjectStor
 
 #[cfg(test)]
 mod tests {
-    use crate::skypie_lib::{object_store::{ObjectStore, ObjectStoreStruct, Cost}, write_choice::WriteChoice, region::Region, decision::Decision, read_choice::ReadChoice, skypie_precomputation::skypie_precomputation, network_record::NetworkCostMap};
+    use std::collections::HashMap;
+
+    use crate::{skypie_lib::{object_store::{ObjectStore, Cost}, write_choice::WriteChoice, region::Region, decision::Decision, read_choice::ReadChoice, skypie_precomputation::skypie_precomputation, network_record::NetworkCostMap}, ApplicationRegion};
     extern crate test;
     //use test::Bencher;
 
@@ -83,22 +84,24 @@ mod tests {
         let batch_size = 2;
 
         let mut cost1 = Cost::new(10.0, "get request");
-        let egress_cost = NetworkCostMap::from_iter(vec![(Region{name:"0".to_string()}, 1.0)]);
+        let egress_cost = NetworkCostMap::from_iter(vec![(Region{id: 0, name:"0".to_string()}, 1.0)]);
         cost1.add_egress_costs(egress_cost);
-        let o1 = ObjectStore::new(ObjectStoreStruct{id: 0, cost: cost1, region: Region { name: "".to_string()}, name: "".to_string()});
+        //let o1 = ObjectStore::new(ObjectStoreStruct{id: 0, cost: cost1, region: Region { name: "".to_string()}, name: "".to_string()});
+        let o1 = ObjectStore{id: 0, cost: cost1, region: Region {id: u16::MAX, name: "".to_string()}, name: "".to_string()};
         
         let mut cost2 = Cost::new(2.0, "get request");
-        let egress_cost = NetworkCostMap::from_iter(vec![(Region{name:"0".to_string()}, 2.0)]);
+        let egress_cost = NetworkCostMap::from_iter(vec![(Region{id: 0, name:"0".to_string()}, 2.0)]);
         cost2.add_egress_costs(egress_cost);
-        let o2 = ObjectStore::new(ObjectStoreStruct{id: 1, cost: cost2, region: Region { name: "".to_string()}, name: "".to_string()});
+        let o2 = ObjectStore{id: 1, cost: cost2, region: Region {id: u16::MAX, name: "".to_string()}, name: "".to_string()};
 
         let object_stores = vec![
             o1.clone(),
             o2.clone()
         ];
 
-        let regions = vec![Region{name:"0".to_string()}];
-        let res: Vec<Decision> = skypie_precomputation(regions.clone(), object_stores, replication_factor, batch_size);
+        let regions = vec![Region{id: 0, name:"0".to_string()}];
+        let app_regions: Vec<ApplicationRegion> = regions.iter().map(|region| ApplicationRegion{region: region.clone(), egress_cost:HashMap::default(), ingress_cost: HashMap::default()}).collect();
+        let res: Vec<Decision> = skypie_precomputation(app_regions.clone(), object_stores, replication_factor, batch_size);
         
         let write_choice = WriteChoice{
             object_stores: vec![
@@ -109,9 +112,9 @@ mod tests {
         
         assert_eq!(res.len(), 2);
         assert_eq!(res[0].write_choice, write_choice);
-        assert_eq!(res[0].read_choice, ReadChoice::from_iter(vec![(regions[0].clone(), o2.clone())]));
+        assert_eq!(res[0].read_choice, ReadChoice::from_iter(vec![(app_regions[0].clone(), o2.clone())]));
         assert_eq!(res[1].write_choice, write_choice);
-        assert_eq!(res[1].read_choice, ReadChoice::from_iter(vec![(regions[0].clone(), o1.clone())]));
+        assert_eq!(res[1].read_choice, ReadChoice::from_iter(vec![(app_regions[0].clone(), o1.clone())]));
         
     }
 }

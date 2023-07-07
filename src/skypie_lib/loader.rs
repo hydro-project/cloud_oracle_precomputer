@@ -1,15 +1,15 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use crate::skypie_lib::{
+use crate::{skypie_lib::{
     network_record::{NetworkRecord, NetworkRecordRaw, NetworkCostMaps},
-    object_store::{ObjectStoreStruct, ObjectStoreStructRaw, ObjectStore}, region::Region,
-};
+    object_store::{ObjectStoreStruct, ObjectStoreStructRaw, ObjectStore}, region::Region, identifier::Identifier,
+}, ApplicationRegion};
 use itertools::Itertools;
 use regex::Regex;
 
 pub struct Loader {
     pub object_stores: Vec<ObjectStore>,
-    pub regions: Vec<Region>,
+    pub app_regions: Vec<ApplicationRegion>,
 }
 
 impl Loader {
@@ -42,9 +42,18 @@ impl Loader {
         // Load object stores
         let object_stores = Loader::load_object_stores(object_store_file_path, region_pattern, &network_egress, &network_ingress);
 
+        // Load application regions
+        let app_regions = regions.into_iter().map(|region|{
+
+            let egress_cost = network_egress.get(&region).unwrap().clone();
+            let ingress_cost = network_ingress.get(&region).unwrap().clone();
+
+            ApplicationRegion{region, egress_cost, ingress_cost}
+        }).collect_vec();
+
         Loader {
             object_stores,
-            regions,
+            app_regions,
         }
     }
 
@@ -78,6 +87,12 @@ impl Loader {
                 dests
             })
             .unique()
+            // Set region IDs by sorting and enumerating them
+            .sorted()
+            .enumerate().map(|(i, mut r)|{
+                r.id = i as u16;
+                r
+            })
             .collect_vec();
 
         // Ensure each region has network costs to itself
@@ -90,6 +105,11 @@ impl Loader {
                 0.0,
             );
         }
+
+        // Ensure each region has a correct ID and the IDs are contiguous
+        regions.iter().for_each(|r|{assert!(r.get_id() != u16::MAX, "Found region with id u16::MAX {:?}", r)});
+        assert_eq!(regions.iter().map(|r| r.get_id()).min().unwrap(), 0);
+        assert_eq!(regions.iter().map(|r| r.get_id()).max().unwrap(), regions.len() as u16 - 1);
 
         return (network_costs, regions);
     }
@@ -138,7 +158,7 @@ impl Loader {
                 x.cost.add_egress_costs(egress_costs.get(&x.region).unwrap().clone());
                 x
             })
-            .map(|x| ObjectStore::new(x))
+            //.map(|x| ObjectStore::new(x))
             .collect_vec();
 
         return object_stores;
