@@ -27,8 +27,8 @@ async def main(args):
 
     receiver_service = deployment.HydroflowCrate(
         src=".",
-        #example="decisions_counter_launch",
-        example="counter",
+        example="decisions_counter_launch",
+        #example="counter",
         on=localhost,
         display_id="counter",
         args=args

@@ -45,16 +45,19 @@ algoArgs = load_args()
 optimizerType = algoArgs["optimizerType"]
 useClarkson = optimizerType.useClarkson
 del algoArgs["optimizerType"]
+verbose = algoArgs.get("verbose", 0)
 
 def redundancy_elimination(inequalities: np.array):
-    print("redundancy_elimination", inequalities.shape)
-    print("inequalities", inequalities)
     # , useClarkson: bool, algoArgs: Dict[Any, Any]
 
-    global algoArgs, optimizerType, useClarkson
+    global algoArgs, optimizerType, useClarkson, verbose
     
-    timerLocal = Timer()
+    #timerLocal = Timer()
+    timerLocal = None
     diff = inequalities.shape[0]
+
+    if verbose > 0:
+        print("redundancy_elimination", inequalities.shape)
 
     if optimizerType.type == "Pareto" and False: # Ignore pareto
         tensor = torch.from_numpy(algoArgs["inequalities"][:,1:-1].copy())
@@ -70,9 +73,19 @@ def redundancy_elimination(inequalities: np.array):
             res3 = redundancyElimination(inequalities=inequalities, optimizerType=optimizerType.type, timer=timerLocal, **algoArgs)
             res3 = [r for (r, _) in res3[:diff]]
 
+    if verbose > 0:
+        print(f"Redundancy elim. result:{res3}")
+
     nonredundant = [pos for pos, r in enumerate(res3) if r == True]
 
+    if verbose > 0:
+        sys.stdout.flush()
+
     return nonredundant
+
+def redundancy_elimination_dummy(inequalities: np.array):
+    print("redundancy_elimination_test", inequalities.shape, flush=True)
+    return [i for i in range(inequalities.shape[0])]
 
 def redundancy_elimination_test():
     coefficients = [

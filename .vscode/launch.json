@@ -20,12 +20,12 @@
                 }
             },
             "args": ["-r=aws",
-             "-n=network_cost_v2.csv",
-             "-s=storage_pricing.csv",
-            "-b=200",
-            "--rf=3",
-            "-o=out.txt"
-        ],
+                "-n=network_cost_v2.csv",
+                "-s=storage_pricing.csv",
+                "-b=200",
+                "--rf=3",
+                "-o=out.txt"
+            ],
             "cwd": "${workspaceFolder}"
         },
         {

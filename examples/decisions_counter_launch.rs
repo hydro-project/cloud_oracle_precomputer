@@ -21,17 +21,9 @@ async fn main() {
     let flow = hydroflow_syntax! {
 
         input = source_stream(input_recv) -> map(|x| -> Input {deserialize_from_bytes(x.unwrap()).unwrap()});
-        /* input -> fold::<'static>(0, |mut acc, _x| {
-            acc += 1;
-            acc
-        }) */
         input  -> for_each(|_|{
             output_monitor.add_arrival_time_now();
             output_monitor.print("Decisions:", Some(1000));
-            //println!("Decisions: {}", output_monitor);
-            /* if output_monitor.get_count() % 1 == 0 {
-                println!("{:?} outputs, at rate {:?}", output_monitor.get_count(), output_monitor.get_arrival_time_average().unwrap());
-            } */
         });
     };
 

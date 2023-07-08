@@ -109,7 +109,7 @@ impl Iterator for DecisionCostIter<'_> {
                     acc + o.get_ingress_cost(&app_region)
                 });
             Some(cost)
-        } else if pos <= egress_start && pos < egress_end {
+        } else if pos >= egress_start && pos < egress_end {
             // Egress is ingress cost of a particular app region and the egress cost of it's assigned object store
             let (app_region, object_store) =
                 &self.egress_iter.next().unwrap();
@@ -141,6 +141,8 @@ impl Decision {
             // Coefficient of inequality, i.e., cost
             ineqs.push(1.0);
         }
+
+        debug_assert_eq!(ineqs.len(), num * dim);
 
         Python::with_gil(|py| {
             // Push into numpy array
@@ -188,6 +190,29 @@ impl PartialEq<Decision> for DecisionRef<'_> {
         }
 
         *self.write_choice == other.write_choice && read_choice_equal
+    }
+}
+
+pub struct DecisionsExtractor {
+    decisions: Vec<Decision>,
+    index_iter: std::vec::IntoIter<usize>,
+}
+
+impl DecisionsExtractor {
+    pub fn new(decisions: Vec<Decision>, indexes: Vec<usize>) -> Self {
+        let index_iter: std::vec::IntoIter<usize> = indexes.into_iter();
+        DecisionsExtractor {
+            decisions,
+            index_iter
+        }
+    }
+}
+
+impl Iterator for DecisionsExtractor {
+    type Item = Decision;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.index_iter.next().map(|i| self.decisions[i].clone())
     }
 }
 
@@ -278,6 +303,54 @@ mod tests {
         assert_eq!(d_cost[6], o0.get_egress_cost(&app_regions[0]));
         assert_eq!(d_cost[7], o1.get_egress_cost(&app_regions[1]));
         assert_eq!(d_cost.len(), 8);
+
+    }
+
+    #[test]
+    fn test_decision_to_inequalities() {
+        let regions = vec![Region{id:0, name: "0".to_string()} ,Region{id: 0, name: "1".to_string()}];
+        let egress_cost = NetworkCostMap::from_iter(vec![
+            (regions[0].clone(), 1.0),
+            (regions[1].clone(), 2.0)
+        ]);
+        let ingress_cost = NetworkCostMap::from_iter(vec![
+            (regions[0].clone(), 0.0),
+            (regions[1].clone(), 0.0)
+        ]);
+
+        let app_regions = regions.iter().map(|r|{ApplicationRegion{region: r.clone(), egress_cost: egress_cost.clone(), ingress_cost: ingress_cost.clone()}}).collect_vec();
+        
+        let mut object_stores = vec![
+            ObjectStore{id: 0, name: "0".to_string(), region: regions[0].clone(), cost: Cost { size_cost: 1.0, put_cost: 2.0, put_transfer: 4.0, get_cost: 3.0, get_transfer: 5.0, egress_cost: HashMap::default(), ingress_cost: HashMap::default() }},
+            ObjectStore{id: 1, name: "1".to_string(), region: regions[1].clone(), cost: Cost { size_cost: 10.0, put_cost: 20.0, put_transfer: 10.0, get_cost: 30.0, get_transfer: 20.0, egress_cost: HashMap::default(), ingress_cost: HashMap::default() }}
+        ];
+
+        for  o in object_stores.iter_mut() {
+            o.cost.add_egress_costs(egress_cost.clone());
+            o.cost.add_ingress_costs(ingress_cost.clone());
+        }
+
+        let o0 = &object_stores[0];
+        let o1 = &object_stores[1];
+        let a0 = &app_regions[0];
+        // Egress of o0 to a0 including get_transfer + Ingress of a0 from o0: 1.0 + 5.0 + 0.0
+        assert_eq!(o0.get_egress_cost(a0), 6.0 );
+        // Ingress of o0 from a0 including put_transfer + Egress of a0 from o0: 0.0 + 4.0 + 1.0
+        assert_eq!(o0.get_ingress_cost(a0), 5.0 );
+
+        let decisions = vec![
+            Decision{ write_choice: WriteChoice{object_stores: object_stores.clone()},
+                read_choice: ReadChoice::from_iter(vec![(app_regions[0].clone(), o0.clone()), (app_regions[1].clone(), o1.clone())])},
+            Decision{ write_choice: WriteChoice{object_stores: object_stores.clone()},
+                read_choice: ReadChoice::from_iter(vec![(app_regions[0].clone(), o1.clone()), (app_regions[1].clone(), o0.clone())])}
+        ];
+
+        let res = Decision::to_inequalities_numpy(&decisions);
+        let dim_expected= 2 + 2 + 2 * 3;
+        Python::with_gil(|py|{
+            let shape: [usize; 2] = res.getattr(py, "shape").unwrap().extract(py).unwrap();
+            assert_eq!(shape, [2, dim_expected]);
+        });
 
     }
 

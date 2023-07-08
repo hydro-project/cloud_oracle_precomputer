@@ -5,6 +5,7 @@ use hydroflow::hydroflow_syntax;
 use pyo3::types::PyModule;
 use pyo3::{Python, PyAny, Py};
 use skypie_lib::Decision;
+use skypie_lib::skypie_lib::decision::DecisionsExtractor;
 use skypie_lib::skypie_lib::monitor::MonitorMovingAverage;
 use skypie_lib::skypie_lib::reduce_oracle_hydroflow::BatcherMap;
 use skypie_lib::Args;
@@ -24,6 +25,7 @@ async fn main() {
 
     let module = "";
     let fun_name = "redundancy_elimination";
+    //let fun_name = "redundancy_elimination_dummy";
     // Read python code from file at compile time in current directory
     let code = include_str!("python_redundancy_bridge.py");
     let fun = Python::with_gil(|py| {
@@ -44,17 +46,14 @@ async fn main() {
 
     let mut input_monitor = MonitorMovingAverage::new(1000);
     let mut batch_monitor = MonitorMovingAverage::new(1000);
+    let mut output_monitor = MonitorMovingAverage::new(1000);
 
-    hydroflow::util::cli::launch_flow(hydroflow_syntax! {
+    let flow = hydroflow_syntax! {
 
         input = source_stream(input_recv) -> map(|x| -> Input {deserialize_from_bytes(x.unwrap()).unwrap()});
         batches = input -> inspect(|_|{
             input_monitor.add_arrival_time_now();
             input_monitor.print("Candidates in:", Some(1000));
-            //println!("Decisions: {}", output_monitor);
-            /* if output_monitor.get_count() % 1 == 0 {
-                println!("{:?} outputs, at rate {:?}", output_monitor.get_count(), output_monitor.get_arrival_time_average().unwrap());
-            } */
         })
         // Collect batch of decisions, batcher returns either None or Some(batch)
         // Filter_map drops None values
@@ -72,31 +71,40 @@ async fn main() {
             //println!("Batch size: {}", x.len());
             x
         }) */
-        batches
-        -> map(|decisions| -> Vec<Decision> {
+        optimal = batches -> map(|decisions| {
             // Convert batch of decisions to numpy array
             let py_array = Decision::to_inequalities_numpy(&decisions);
+
 
             Python::with_gil(|py| {
                 type T = Vec<usize>;
     
-                let py_res = fun.call(py, (py_array,), None).unwrap();
                 // Computing optimal decisions by row IDs in vector
+                let py_res = fun.call(py, (py_array,), None).unwrap();
                 let res: T = py_res.extract(py).unwrap();
-    
+
+                //println!("Optimal decisions: ({}) {:?}", res.len(), res);
+                
                 // Extract optimal decisions by ids in res
-                let mut optimal = Vec::with_capacity(res.len());
+                /* let mut optimal = Vec::with_capacity(res.len());
                 for id in res {
                     optimal.push(decisions[id].clone());
                 }
 
-                optimal
+                optimal */
+                DecisionsExtractor::new(decisions, res)
             })
         })
+        -> flatten();
+
         //-> py_run(args.code, args.module, args.function)
-        -> for_each(|x|{println!("{:?}", x);});
-        /* -> for_each(|_: Vec<Decision>|{
-            // Count decisions
-        }); */
-    }).await;
+        optimal -> for_each(|_x|{
+            //println!("Optimal decisions done: size {}", x.len());
+            output_monitor.add_arrival_time_now();
+            output_monitor.print("Optimal:", Some(1));
+        });
+    };
+
+    println!("Launching");
+    hydroflow::util::cli::launch_flow(flow).await;
 }
