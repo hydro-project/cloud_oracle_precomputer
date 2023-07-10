@@ -138,7 +138,7 @@ async fn main() {
     let module = "";
     let fun_name = "redundancy_elimination";
     // Read python code from file at compile time in current directory
-    let code = include_str!("python_redundancy_bridge.py");
+    let code = include_str!("../src/skypie_lib/python_redundancy_bridge.py");
 
     let coefficients: Vec<Vec<f64>> = vec![
         vec![0.5, 3.0], // f_1(x,y) = .5x + 3y

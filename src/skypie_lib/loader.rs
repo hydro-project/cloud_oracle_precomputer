@@ -15,7 +15,7 @@ pub struct Loader {
 impl Loader {
     pub fn new(network_file_path: &PathBuf, object_store_file_path: &PathBuf, region_pattern: &str) -> Loader {
 
-        let (network_egress, regions) = Loader::load_network(network_file_path, region_pattern);
+        let (network_egress, regions, region_names) = Loader::load_network(network_file_path, region_pattern);
         
         // Load network ingress costs, currently 0.0
         let network_ingress = network_egress
@@ -40,7 +40,7 @@ impl Loader {
         assert!(!regions.is_empty());
 
         // Load object stores
-        let object_stores = Loader::load_object_stores(object_store_file_path, region_pattern, &network_egress, &network_ingress);
+        let object_stores = Loader::load_object_stores(object_store_file_path, region_pattern, &network_egress, &network_ingress, &region_names);
 
         // Load application regions
         let app_regions = regions.into_iter().map(|region|{
@@ -60,39 +60,56 @@ impl Loader {
     fn load_network(
         network_file_path: &PathBuf,
         region_pattern: &str,
-    ) -> (NetworkCostMaps, Vec<Region>) {
+    ) -> (NetworkCostMaps, Vec<Region>, HashMap<String, Region>) {
         let re = Regex::new(region_pattern).unwrap();
 
         let rdr = csv::Reader::from_path(network_file_path).unwrap();
         let iter: csv::DeserializeRecordsIntoIter<std::fs::File, NetworkRecordRaw> =
             rdr.into_deserialize();
+
+        let mut region_names: HashMap<String, Region> = HashMap::new();
+
         let mut network_costs: NetworkCostMaps = iter
             .map(|r: Result<NetworkRecordRaw, csv::Error>| -> NetworkRecord { r.unwrap().into() })
             //.inspect(|r| println!("Raw network: {:?}", r))
             .filter(|r| re.is_match(&r.src.name) || re.is_match(&r.dest.name))
             //.inspect(|r| println!("Filtered network: {:?}", r))
             .fold(NetworkCostMaps::new(), |mut agg, e| {
-                let src_map = agg.entry(e.src.clone()).or_insert(HashMap::new());
-                src_map.insert(e.dest.clone(), e.cost);
+                // Collect src/dest region in regions
+                let src_region = Region{id: region_names.len() as u16, name: e.src.name.clone()};
+                {
+                    let _ = region_names.entry(e.src.name.clone()).or_insert(src_region);
+                }
+                
+                let dest_region = Region{id: region_names.len() as u16, name: e.dest.name.clone()};
+                {
+                    let _ = region_names.entry(e.dest.name.clone()).or_insert(dest_region);
+                }
+                
+                let src_region = region_names.get(&e.src.name).unwrap();
+
+                let dest_region = region_names.get(&e.dest.name).unwrap();
+
+                let src_map = agg.entry(src_region.clone()).or_insert(HashMap::new());
+                src_map.insert(dest_region.clone(), e.cost);
                 agg
             });
 
         // Collect all region names, including the destination regions
-        let regions = network_costs
+        let regions =
+            /* network_costs
             .iter()
             .flat_map(|x| {
                 let (src, dests) = x;
                 let mut dests = dests.keys().map(|x| x.clone()).collect_vec();
                 dests.push(src.clone());
                 dests
-            })
+            }) */
+            region_names.values()
             .unique()
             // Set region IDs by sorting and enumerating them
             .sorted()
-            .enumerate().map(|(i, mut r)|{
-                r.id = i as u16;
-                r
-            })
+            .map(|r| r.to_owned())
             .collect_vec();
 
         // Ensure each region has network costs to itself
@@ -106,15 +123,28 @@ impl Loader {
             );
         }
 
-        // Ensure each region has a correct ID and the IDs are contiguous
-        regions.iter().for_each(|r|{assert!(r.get_id() != u16::MAX, "Found region with id u16::MAX {:?}", r)});
-        assert_eq!(regions.iter().map(|r| r.get_id()).min().unwrap(), 0);
-        assert_eq!(regions.iter().map(|r| r.get_id()).max().unwrap(), regions.len() as u16 - 1);
+        // Validate application regions
+        let min = regions.iter().map(|r|r.get_id()).min().unwrap();
+        let max = regions.iter().map(|r|r.get_id()).max().unwrap();
+        let unique = regions.iter().map(|r|r.get_id()).unique().collect_vec().len();
+        
+        println!("Regions: {} ({}), min: {}, max: {}", regions.len(), unique, min, max);
 
-        return (network_costs, regions);
+        if regions.len() != unique {
+            for r in &regions {
+                println!("Region: {:?}", r);
+            }
+        }
+        debug_assert_eq!(regions.len(), unique);
+        debug_assert_eq!(min, 0);
+        debug_assert_eq!(max as usize, regions.len() - 1);
+
+        regions.iter().for_each(|r|{assert!(r.get_id() != u16::MAX, "Found region with id u16::MAX {:?}", r)});
+
+        return (network_costs, regions, region_names);
     }
 
-    fn load_object_stores(object_store_file_path: &PathBuf, region_pattern: &str, egress_costs: &NetworkCostMaps, ingress_costs: &NetworkCostMaps) -> Vec<ObjectStore> {
+    fn load_object_stores(object_store_file_path: &PathBuf, region_pattern: &str, egress_costs: &NetworkCostMaps, ingress_costs: &NetworkCostMaps, region_names: &HashMap<String, Region>) -> Vec<ObjectStore> {
         let re = Regex::new(region_pattern).unwrap();
 
         let rdr = csv::Reader::from_path(object_store_file_path).unwrap();
@@ -126,12 +156,22 @@ impl Loader {
             .filter(|r: &ObjectStoreStruct| re.is_match(&r.region.name))
             
             // Combine object stores with identical names
-            .fold(HashMap::new(), |mut agg, object_store| {
+            .fold(HashMap::new(), |mut agg, mut object_store| {
                 let name = object_store.name.clone();
-                let region = object_store.region.name.clone();
-                let key = format!("{}-{}", name, region);
-                let entry = agg.entry(key).or_insert(object_store.clone());
-                entry.cost.merge(object_store.cost);
+                let region_name = object_store.region.name.clone();
+                let key = format!("{}-{}", name, region_name);
+
+                // Set region with correct id
+                if !region_names.contains_key(&region_name) {
+                    println!("WARN: Region {:?} not found, skipping object store: {}", region_name, key);
+                }
+                else {
+                    let region = region_names.get(&region_name).unwrap().clone();
+                    object_store.region = region;
+                    
+                    let entry = agg.entry(key).or_insert(object_store.clone());
+                    entry.cost.merge(object_store.cost);
+                }
 
                 agg
             }).values()

@@ -89,3 +89,44 @@ impl fmt::Display for MonitorMovingAverage {
         write!(f, "{} items, {:.2} items/s", count, throughput)
     }
 }
+
+#[derive(Clone)]
+pub struct MonitorNOOP {
+}
+
+impl MonitorNOOP {
+    pub fn new(size: usize) -> Self {
+        Self {}
+    }
+
+    fn add_arrival_time(&mut self, _time: std::time::Instant) {
+    }
+
+    pub fn add_arrival_time_now(&mut self) {
+    }
+
+    pub fn add_arrival_time_now_sampled(&mut self, _sample_rate: i32) {
+    }
+
+    pub fn get_arrival_time_average(&self) -> Option<std::time::Duration> {
+        None
+    }
+
+    pub fn get_throughput(&self) -> Option<f64> {
+        None
+    }
+
+    pub fn get_count(&self) -> usize {
+        0
+    }
+
+    pub fn print(&self, _prefix: &str, _sample_rate: Option<i32>) {
+    }
+
+}
+
+impl fmt::Display for MonitorNOOP {
+    fn fmt(&self, _f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Result::Ok(())
+    }
+}

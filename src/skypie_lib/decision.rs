@@ -174,6 +174,21 @@ pub struct DecisionRef<'a> {
     pub read_choice: ReadChoiceRef<'a>,
 }
 
+// Convert from DecisionRef to Decision
+impl From<DecisionRef<'_>> for Decision {
+    fn from(decision_ref: DecisionRef<'_>) -> Self {
+        let mut read_choice = ReadChoice::new(decision_ref.read_choice.len());
+        for (region, object_store) in decision_ref.read_choice.iter() {
+            read_choice.insert((*region).clone(), object_store.clone());
+        }
+
+        Decision {
+            write_choice: *decision_ref.write_choice,
+            read_choice: read_choice,
+        }
+    }
+}
+
 impl PartialEq<Decision> for DecisionRef<'_> {
     fn eq(&self, other: &Decision) -> bool {
         // Test if the hashmaps of the read_choices are equal

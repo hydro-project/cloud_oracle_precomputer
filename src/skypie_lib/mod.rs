@@ -19,5 +19,6 @@ pub mod args;
 pub mod loader;
 pub mod skypie_precomputation;
 pub mod candidate_policies_hydroflow;
+pub mod candidate_policies_and_reduce_hydroflow;
 pub mod monitor;
 pub mod reduce_oracle_hydroflow;

@@ -14,20 +14,21 @@ use skypie_lib::Args;
 async fn main() {
     let mut ports = hydroflow::util::cli::init().await;
 
-    let args = Args::parse();
-
+    
     let input_recv = ports
-        .port("input")
-        // connect to the port with a single recipient
-        .connect::<ConnectedDirect>() 
-        .await
-        .into_source();
+    .port("input")
+    // connect to the port with a single recipient
+    .connect::<ConnectedDirect>() 
+    .await
+    .into_source();
+
+    let args = Args::parse();
 
     let module = "";
     let fun_name = "redundancy_elimination";
     //let fun_name = "redundancy_elimination_dummy";
     // Read python code from file at compile time in current directory
-    let code = include_str!("python_redundancy_bridge.py");
+    let code = include_str!("../src/skypie_lib/python_redundancy_bridge.py");
     let fun = Python::with_gil(|py| {
 
         let fun: Py<PyAny> =
@@ -44,16 +45,16 @@ async fn main() {
     type Input = skypie_lib::skypie_lib::candidate_policies_hydroflow::OutputType;
     let mut batcher = BatcherMap::<Input>::new(args.batch_size);
 
-    let mut input_monitor = MonitorMovingAverage::new(1000);
-    let mut batch_monitor = MonitorMovingAverage::new(1000);
-    let mut output_monitor = MonitorMovingAverage::new(1000);
+    let mut reduce_input_monitor = MonitorMovingAverage::new(1000);
+    let mut reduce_batch_monitor = MonitorMovingAverage::new(1000);
+    let mut reduce_output_monitor = MonitorMovingAverage::new(1000);
 
     let flow = hydroflow_syntax! {
 
         input = source_stream(input_recv) -> map(|x| -> Input {deserialize_from_bytes(x.unwrap()).unwrap()});
         batches = input -> inspect(|_|{
-            input_monitor.add_arrival_time_now();
-            input_monitor.print("Candidates in:", Some(1000));
+            reduce_input_monitor.add_arrival_time_now();
+            reduce_input_monitor.print("Candidates in:", Some(1000));
         })
         // Collect batch of decisions, batcher returns either None or Some(batch)
         // Filter_map drops None values
@@ -62,15 +63,11 @@ async fn main() {
             return batcher.add(x)
         })
         -> inspect(|_|{
-            batch_monitor.add_arrival_time_now();
-            batch_monitor.print("Batches:", None);
+            reduce_batch_monitor.add_arrival_time_now();
+            reduce_batch_monitor.print("Batches:", None);
         });
 
         // Redundancy elimination via python
-        /* batches -> map(|x: Vec<Input>|{
-            //println!("Batch size: {}", x.len());
-            x
-        }) */
         optimal = batches -> map(|decisions| {
             // Convert batch of decisions to numpy array
             let py_array = Decision::to_inequalities_numpy(&decisions);
@@ -99,9 +96,8 @@ async fn main() {
 
         //-> py_run(args.code, args.module, args.function)
         optimal -> for_each(|_x|{
-            //println!("Optimal decisions done: size {}", x.len());
-            output_monitor.add_arrival_time_now();
-            output_monitor.print("Optimal:", Some(1));
+            reduce_output_monitor.add_arrival_time_now();
+            reduce_output_monitor.print("Optimal:", Some(1));
         });
     };
 

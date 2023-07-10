@@ -26,28 +26,18 @@ async def main(args):
     )
     
     candidates_service = deployment.HydroflowCrate(
+        #profile="dev",
         src=".",
-        #example="simple_candidate_policies_launch",
-        example="candidate_policies_launch",
+        example="candidate_and_reduce_launch",
+        #example="counter",
         on=localhost,
-        display_id="candidate_policies",
-        args=args
-    )
-
-    receiver_service = deployment.HydroflowCrate(
-        src=".",
-        #example="redundancy_elim_test_launch",
-        #example="decisions_counter_launch",
-        example="decisions_counter_launch",
-        on=localhost,
-        display_id="redundancy_elim",
+        display_id="candidate_reduce",
         args=args
     )
 
     ## Connect named ports of services
     # Sender service's "output" port to receiver service's "input" port
     write_choices_service.ports.output.send_to(candidates_service.ports.input)
-    candidates_service.ports.output.send_to(receiver_service.ports.input)
 
     # Deploy and start, blocking until deployment is complete
     await deployment.deploy()
