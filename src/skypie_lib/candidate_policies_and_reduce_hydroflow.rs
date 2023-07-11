@@ -59,6 +59,7 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
     let mut reduce_input_monitor = MonitorNOOP::new(1000); //MonitorMovingAverage::new(1000);
     let mut reduce_batch_monitor = MonitorNOOP::new(1000); //MonitorMovingAverage::new(1000);
     let mut reduce_output_monitor = MonitorMovingAverage::new(1000);
+    let optimal_log_interval = Some(1000);
     
 
     let flow = hydroflow_syntax! {
@@ -166,7 +167,7 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
         //-> py_run(args.code, args.module, args.function)
         optimal -> for_each(|_x|{
             reduce_output_monitor.add_arrival_time_now();
-            reduce_output_monitor.print("Optimal:", Some(100));
+            reduce_output_monitor.print("Optimal:", optimal_log_interval);
         });
 
     };

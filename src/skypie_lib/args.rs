@@ -30,4 +30,7 @@ pub struct Args {
     /// Output the candidates
     #[clap(long)]
     pub output_candidates: bool,
+
+    #[clap(long, short)]
+    pub redundancy_elimination_workers: u32,
 }
