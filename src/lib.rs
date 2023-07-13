@@ -16,3 +16,5 @@ pub use skypie_lib::region::Region;
 pub use skypie_lib::write_choice::WriteChoice;
 pub use skypie_lib::decision::Decision;
 pub use skypie_lib::application_region::ApplicationRegion;
+pub use skypie_lib::influx_logger;
+pub use skypie_lib::log_entry::SkyPieLogEntry;

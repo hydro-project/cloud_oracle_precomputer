@@ -42,14 +42,17 @@ impl Loader {
         // Load object stores
         let object_stores = Loader::load_object_stores(object_store_file_path, region_pattern, &network_egress, &network_ingress, &region_names);
 
+        
         // Load application regions
         let app_regions = regions.into_iter().map(|region|{
-
+            
             let egress_cost = network_egress.get(&region).unwrap().clone();
             let ingress_cost = network_ingress.get(&region).unwrap().clone();
-
+            
             ApplicationRegion{region, egress_cost, ingress_cost}
         }).collect_vec();
+        
+        println!("Number of object stores: {}, number of regions: {}", object_stores.len(), app_regions.len());
 
         Loader {
             object_stores,
@@ -72,7 +75,7 @@ impl Loader {
         let mut network_costs: NetworkCostMaps = iter
             .map(|r: Result<NetworkRecordRaw, csv::Error>| -> NetworkRecord { r.unwrap().into() })
             //.inspect(|r| println!("Raw network: {:?}", r))
-            .filter(|r| re.is_match(&r.src.name) || re.is_match(&r.dest.name))
+            .filter(|r| re.is_match(&r.src.name) && re.is_match(&r.dest.name))
             //.inspect(|r| println!("Filtered network: {:?}", r))
             .fold(NetworkCostMaps::new(), |mut agg, e| {
                 // Collect src/dest region in regions
@@ -127,8 +130,6 @@ impl Loader {
         let min = regions.iter().map(|r|r.get_id()).min().unwrap();
         let max = regions.iter().map(|r|r.get_id()).max().unwrap();
         let unique = regions.iter().map(|r|r.get_id()).unique().collect_vec().len();
-        
-        println!("Regions: {} ({}), min: {}, max: {}", regions.len(), unique, min, max);
 
         if regions.len() != unique {
             for r in &regions {

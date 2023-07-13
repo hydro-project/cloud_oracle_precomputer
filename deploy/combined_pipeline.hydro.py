@@ -1,4 +1,5 @@
 import hydro
+from datetime import datetime
 
 def create_scale_up_service(deployment, *args, num_scale_up, display_id, **kwargs):
     """
@@ -56,17 +57,21 @@ async def main(args):
 
     localhost = deployment.Localhost()
 
-    redundancy_elimination_workers = 6
+    redundancy_elimination_workers = 1
+
+    now = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 
     args = {
         "region-selector": "aws",
-        "replication-factor": "2",
+        "replication-factor": "1",
         "output-file-name": "/dev/null",
         "batch-size": "200",
         "network-file": "/Users/tbang/git/sky-pie-precomputer/network_cost_v2.csv",
         "object-store-file": "/Users/tbang/git/sky-pie-precomputer/storage_pricing.csv",
         "redundancy-elimination-workers": redundancy_elimination_workers,
         #"output_candidates": ""
+        #"experiment-name": f"test-{now}"
+        "experiment-name": f"test"
     }
     # Convert args to a list of strings with --key=value format
     args = [f"--{key}={value}" for key, value in args.items()]

@@ -33,4 +33,7 @@ pub struct Args {
 
     #[clap(long, short)]
     pub redundancy_elimination_workers: u32,
+
+    #[clap(long, short)]
+    pub experiment_name: String,
 }

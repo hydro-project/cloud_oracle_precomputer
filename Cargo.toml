@@ -20,6 +20,8 @@ numpy = "^0.18"
 widestring = "1.0.2"
 which = "4.4.0"
 lazy_static = "1.4.0"
+influxdb = { version = "0.7.0", features = ["derive"] }
+#influxdb = { version = "0.7.0", default-features = false,features = ["derive", "use-serde", "reqwest-client"] }
 
 #[dependencies.pyo3]
 #version = "0.18.3"

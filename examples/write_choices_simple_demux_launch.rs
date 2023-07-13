@@ -1,12 +1,15 @@
-use itertools::Itertools;
-use clap::Parser;
+use std::{sync::atomic::{compiler_fence, Ordering::SeqCst}};
 
-use hydroflow::util::cli::{ConnectedDirect, ConnectedSink, ConnectedDemux};
-use hydroflow::util::{serialize_to_bytes};
+use clap::Parser;
+use itertools::Itertools;
+
 use hydroflow::hydroflow_syntax;
-use skypie_lib::Loader;
+use hydroflow::util::cli::{ConnectedDemux, ConnectedDirect, ConnectedSink};
+use hydroflow::util::serialize_to_bytes;
+use skypie_lib::influx_logger::{InfluxLogger, InfluxLoggerConfig};
 use skypie_lib::skypie_lib::args::Args;
 use skypie_lib::skypie_lib::monitor::MonitorMovingAverage;
+use skypie_lib::{Loader, SkyPieLogEntry};
 
 #[hydroflow::main]
 async fn main() {
@@ -15,12 +18,16 @@ async fn main() {
     // Load the input
     let args = Args::parse();
 
-    let loader = Loader::new(&args.network_file, &args.object_store_file, &args.region_selector);
-    
+    let loader = Loader::new(
+        &args.network_file,
+        &args.object_store_file,
+        &args.region_selector,
+    );
+
     // Get ports
     let output_send = ports
         .port("output")
-        .connect::<ConnectedDemux<ConnectedDirect>>() 
+        .connect::<ConnectedDemux<ConnectedDirect>>()
         .await
         .into_sink();
 
@@ -30,12 +37,26 @@ async fn main() {
     let redundancy_elimination_workers: u32 = args.redundancy_elimination_workers;
 
     let mut output_monitor = MonitorMovingAverage::new(1000);
-    let output_log_frequency = 10000;
+    let output_log_frequency = 100;
 
-    let flow = hydroflow_syntax!{
-        write_choices = source_iter(object_stores.into_iter().combinations(replication_factor));
+    let logger = InfluxLogger::new(InfluxLoggerConfig {
+        host: "localhost".to_string(),
+        port: 8086,
+        database: "skypie".to_string(),
+        measurement: args.experiment_name,
+    });
+    let logger_sink = Box::pin(logger.into_sink::<SkyPieLogEntry>());
+
+    let flow = hydroflow_syntax! {
+        write_choices = source_iter(object_stores.into_iter().combinations(replication_factor))
+        -> demux(|v, var_args!(out,time)| {
+            let now = std::time::Instant::now();
+            compiler_fence(SeqCst);
+            time.give(now);
+            out.give(v);
+        });
         // Distribute the write choices among instances of next stage
-        write_choices -> map(|x| skypie_lib::skypie_lib::candidate_policies_hydroflow::InputType{object_stores: x})
+        serialized = write_choices[out] -> map(|x| skypie_lib::skypie_lib::candidate_policies_hydroflow::InputType{object_stores: x})
         -> map(|x:skypie_lib::skypie_lib::candidate_policies_hydroflow::InputType| serialize_to_bytes(x))
         -> inspect(|_|{
             output_monitor.add_arrival_time_now();
@@ -44,7 +65,24 @@ async fn main() {
         // Round robin send to the next stage
         -> enumerate()
         -> map(|(i, x)| (i % redundancy_elimination_workers, x))
-        -> dest_sink(output_send);
+        -> demux(|v, var_args!(out, time)|{
+            let now = std::time::Instant::now();
+            compiler_fence(SeqCst);
+            time.give((1, now));
+            out.give(v);
+        });
+
+        serialized[out] -> dest_sink(output_send);
+
+        write_choices[time] -> [0]measurement;
+        serialized[time] -> map(|_|{1}) -> reduce::<'tick>(|acc: &mut u64, i|{*acc = *acc + i;}) -> [1]measurement;
+        measurement = zip() -> map(|(start_time, count)|(start_time.elapsed().as_secs_f64(), count))
+        -> map(|(cycle_time, count)|{
+            let epoch = context.current_tick();
+            SkyPieLogEntry::new(cycle_time,count,epoch as u64,"write_choices".to_string())
+        })
+        -> dest_sink(logger_sink);
+
     };
 
     hydroflow::util::cli::launch_flow(flow).await;

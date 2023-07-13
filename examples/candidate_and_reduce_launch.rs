@@ -30,7 +30,7 @@ async fn main() {
     let data = Box::new(loader.app_regions);
     let regions: &'static Vec<ApplicationRegion> = Box::leak(data);
 
-    let flow = candidate_policies_reduce_hydroflow(regions, input_recv, args.batch_size);
+    let flow = candidate_policies_reduce_hydroflow(regions, input_recv, args.batch_size, args.experiment_name);
 
     println!("Launching candidate and reduce");
     hydroflow::util::cli::launch_flow(flow).await;

@@ -1,8 +1,10 @@
+use std::{sync::atomic::{compiler_fence, Ordering::SeqCst}};
+
 use hydroflow::{hydroflow_syntax, tokio_stream::{Stream}, bytes::{BytesMut, Bytes}, util::{deserialize_from_bytes}, futures::Sink};
 use itertools::Itertools;
 use pyo3::{Python, PyAny, Py, types::PyModule};
 
-use crate::{skypie_lib::{write_choice::WriteChoice, opt_assignments::opt_assignments, merge_policies::{AssignmentsRef, MergeIteratorRef}, decision::{Decision, DecisionRef, DecisionsExtractor}, object_store::ObjectStore, range::Range, self, reduce_oracle_hydroflow::BatcherMap, identifier::Identifier, monitor::MonitorNOOP}, ApplicationRegion};
+use crate::{skypie_lib::{write_choice::WriteChoice, opt_assignments::opt_assignments, merge_policies::{AssignmentsRef, MergeIteratorRef}, decision::{Decision, DecisionRef}, object_store::ObjectStore, range::Range, self, reduce_oracle_hydroflow::BatcherMap, identifier::Identifier, monitor::MonitorNOOP}, ApplicationRegion, influx_logger::{InfluxLogger, InfluxLoggerConfig}, SkyPieLogEntry};
 
 use super::monitor::MonitorMovingAverage;
 
@@ -13,7 +15,7 @@ pub type OutputType = Decision;
 pub type InputConnection = std::pin::Pin<Box<dyn Stream<Item = Result<BytesMut, std::io::Error>> + Send + Sync>>;
 pub type OutputConnection = std::pin::Pin<Box<dyn Sink<Bytes, Error = std::io::Error> + Send + Sync>>;
 
-pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<ApplicationRegion>, input: InputConnection, batch_size: usize) -> hydroflow::scheduled::graph::Hydroflow
+pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<ApplicationRegion>, input: InputConnection, batch_size: usize, experiment_name: String) -> hydroflow::scheduled::graph::Hydroflow
 {
     {
         // Validate application regions
@@ -32,13 +34,19 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
     
     }
 
-    let mut input_monitor = MonitorMovingAverage::new(1000);
-    let mut output_monitor = MonitorMovingAverage::new(1000);
+    let logger = InfluxLogger::new(InfluxLoggerConfig{
+        host: "localhost".to_string(),
+        port: 8086,
+        database: "skypie".to_string(),
+        measurement: experiment_name
+    });
+    let logger_sink = Box::pin(logger.into_sink::<SkyPieLogEntry>());
+
+    let mut input_monitor = MonitorNOOP::new(0); //MonitorMovingAverage::new(1000);
+    let mut output_monitor = MonitorMovingAverage::new(1000); //MonitorNOOP::new(0);
 
     let module = "";
     let fun_name = "redundancy_elimination";
-    //let fun_name = "redundancy_elimination_dummy";
-    // Read python code from file at compile time in current directory
     let code = include_str!("python_redundancy_bridge.py");
     let fun = Python::with_gil(|py| {
 
@@ -58,13 +66,24 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
 
     let mut reduce_input_monitor = MonitorNOOP::new(1000); //MonitorMovingAverage::new(1000);
     let mut reduce_batch_monitor = MonitorNOOP::new(1000); //MonitorMovingAverage::new(1000);
-    let mut reduce_output_monitor = MonitorMovingAverage::new(1000);
-    let optimal_log_interval = Some(1000);
+    let batch_logging_frequency = Some(1);
+    let mut reduce_output_monitor = MonitorNOOP::new(0); //MonitorMovingAverage::new(1000);
+    let optimal_log_interval = Some(1);
     
 
     let flow = hydroflow_syntax! {
         source_in = source_stream(input) -> map(|x| -> InputType {deserialize_from_bytes(x.unwrap()).unwrap()})
-        -> map(|x: WriteChoice| Box::<WriteChoice>::new(x))
+        -> demux(|v, var_args!(out, time)| {
+            let now = std::time::Instant::now();
+            compiler_fence(SeqCst);
+            time.give(now);
+            out.give(v);
+        }
+        );
+
+        logger_sink = union() -> dest_sink(logger_sink);
+
+        source_parsed = source_in[out] -> map(|x: WriteChoice| Box::<WriteChoice>::new(x))
         -> flat_map(|w: Box::<WriteChoice>| { regions.iter().map(move |r: &'static ApplicationRegion| (w.clone(), r) )})
         //-> inspect(|(_, r)|{assert_ne!(r.get_id(), u16::MAX); println!("Region: {}", r.get_id());})
         -> inspect(|_|{
@@ -73,24 +92,25 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
         });
 
         // Get optimal assignments of region r
-        assignments = source_in -> flat_map(|(w, r): (Box::<WriteChoice>, &'static ApplicationRegion) | {
+        assignments = source_parsed -> flat_map(|(w, r): (Box::<WriteChoice>, &'static ApplicationRegion) | {
+            // TODO: Continue debugging from here
             opt_assignments(w.clone(), r).map(move |x| {(w.clone(), (r,x))} )
         });
         //-> inspect(|(_, (r, _))|{println!("Assignments: {}", r.get_id());});
 
         // Convert to (upper bound, object store) pairs 
         converted_assignments = assignments
-        -> map(|(w, (r, (o, range))): (Box<WriteChoice>, (&'static ApplicationRegion, (ObjectStore, Range)))| { (w, (r, (range.max, o)))})
-        -> inspect(|(_, (r, _))|{assert_ne!(r.get_id(), u16::MAX);});
+        -> map(|(w, (r, (o, range))): (Box<WriteChoice>, (&'static ApplicationRegion, (ObjectStore, Range)))| -> (Box<WriteChoice>, (&'static ApplicationRegion, (f64, ObjectStore))) { (w, (r, (range.max, o)))})
+        -> inspect(|(_, (r, _)): &(_,(&'static ApplicationRegion,_))| {debug_assert_ne!(r.get_id(), u16::MAX);});
 
-        assignments_acc = converted_assignments -> fold_keyed(||{AssignmentsRef::new()}, |acc: &mut AssignmentsRef, (r, val)|{
+        assignments_acc = converted_assignments -> fold_keyed::<'tick>(||{AssignmentsRef::new()}, |acc: &mut AssignmentsRef, (r, val)|{
             let v = acc.entry(r).or_insert(vec![]);
             v.push(val);
         })
         -> inspect(|(_, assignments)|{
-            assert_eq!(assignments.len(), regions.len());
+            debug_assert_eq!(assignments.len(), regions.len());
             for (r, _) in assignments.iter() {
-                assert_ne!(r.get_id(), u16::MAX);
+                debug_assert_ne!(r.get_id(), u16::MAX);
             }
         });
 
@@ -101,10 +121,30 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
             }
             //MergeIterator::new(write_choice, assignments)
             MergeIteratorRef::new(write_choice, assignments)
-        }) -> inspect(|_|{
+        })
+        -> inspect(|_|{
             output_monitor.add_arrival_time_now();
             output_monitor.print("Candidates out: ", Some(1000));
-        });
+        })
+        -> tee();
+
+        // Find the bug above
+
+         // Measure candidate cycle time here
+         candidates
+         -> map(|_: _| (1, std::time::Instant::now()))
+         -> reduce::<'tick>(|acc: &mut (usize, std::time::Instant), (len, start_time)|{
+             acc.0 = acc.0 + len;
+             acc.1 = acc.1.max(start_time);
+            })
+        -> [1]measurement_candidates;
+        measurement_candidates = zip(); //cross_join::<'tick, HalfMultisetJoinState>();
+        source_in[time] -> reduce::<'tick>(|acc: &mut std::time::Instant, e| {*acc = (*acc).min(e)}) -> enumerate() -> [0]measurement_candidates;
+        measurement_candidates
+         -> map(|((i, start_time), (len, end_time))| (end_time.duration_since(start_time).as_secs_f64(), i, len))
+         -> map(|(t, i, len)|SkyPieLogEntry::new(t, len as u64, i as u64, "candidates".to_string()))
+         //-> inspect(|x|{println!("{}: {:?}", context.current_tick(), x);})
+         -> logger_sink;
 
         // Push into reduce_oracle
         /* candidates -> map(|x: DecisionRef|{
@@ -134,11 +174,17 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
         })
         -> inspect(|_|{
             reduce_batch_monitor.add_arrival_time_now();
-            reduce_batch_monitor.print("Batches:", None);
+            reduce_batch_monitor.print("Batches:", batch_logging_frequency);
+        })
+        -> demux(|v, var_args!(out, time)| {
+            let now = std::time::Instant::now();
+            compiler_fence(SeqCst);
+            time.give(now);
+            out.give(v);
         });
 
         // Redundancy elimination via python
-        optimal = batches -> map(|decisions| {
+        optimal = batches[out] -> map(|decisions| {
             // Convert batch of decisions to numpy array
             let py_array = Decision::to_inequalities_numpy(&decisions);
 
@@ -153,24 +199,44 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
                 //println!("Optimal decisions: ({}) {:?}", res.len(), res);
                 
                 // Extract optimal decisions by ids in res
-                /* let mut optimal = Vec::with_capacity(res.len());
+                let mut optimal = Vec::with_capacity(res.len());
                 for id in res {
                     optimal.push(decisions[id].clone());
                 }
 
-                optimal */
-                DecisionsExtractor::new(decisions, res)
+                optimal
+                //DecisionsExtractor::new(decisions, res)
             })
         })
-        -> flatten();
+        -> tee();
+
+        //-> flatten();
 
         //-> py_run(args.code, args.module, args.function)
-        optimal -> for_each(|_x|{
+        //optimal_tee = optimal -> tee();
+        optimal -> flatten() -> for_each(|_x|{
             reduce_output_monitor.add_arrival_time_now();
             reduce_output_monitor.print("Optimal:", optimal_log_interval);
         });
 
+        measurement = zip();
+        batches[time] -> enumerate() -> [0]measurement;
+        optimal -> map(|x|(x.len(), std::time::Instant::now())) -> [1]measurement;
+        measurement -> map(|((epoch, start_time), (len, end_time))|
+            (len, end_time.duration_since(start_time).as_secs_f64(), epoch))
+        //-> inspect(|x|{println!("{}: {:?}", context.current_tick(), x);})
+        -> reduce::<'tick>(|acc: &mut (usize, f64, usize), (len, duration, epoch)|{
+             acc.0 = acc.0 + len;
+             acc.1 = acc.1 + duration;
+             acc.2 = acc.2.max(epoch);
+            })
+        -> map(|(len, duration, epoch)|SkyPieLogEntry::new(duration, len as u64, epoch as u64, "optimal".to_string()))
+        //-> inspect(|x|{println!("{}: {:?}", context.current_tick(), x);})
+        -> logger_sink;
+
     };
+
+    //eprintln!("{}", flow.meta_graph().unwrap().to_mermaid());
 
     return flow;
 
