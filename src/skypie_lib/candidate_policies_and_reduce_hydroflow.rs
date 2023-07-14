@@ -34,7 +34,7 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
 
     let logger_sink = Box::pin(logger.into_sink::<SkyPieLogEntry>());
 
-    let mut input_monitor = MonitorMovingAverage::new(1000); //MonitorNOOP::new(0); //MonitorMovingAverage::new(1000);
+    let mut input_monitor = MonitorNOOP::new(1000); //MonitorNOOP::new(0); //MonitorMovingAverage::new(1000);
     //let mut output_monitor = MonitorMovingAverage::new(1000); //MonitorNOOP::new(0);
 
     let module = "";
@@ -60,7 +60,7 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
     let mut reduce_batch_monitor = MonitorNOOP::new(1000); //MonitorMovingAverage::new(1000);
     let batch_logging_frequency = Some(1);
     let mut reduce_output_monitor =  MonitorMovingAverage::new(1000); // MonitorNOOP::new(0);
-    let optimal_log_interval = Some(100);
+    let optimal_log_interval = Some(1000);
 
     let flow = hydroflow_syntax! {
         source_in = source_stream(input) -> map(|x| -> InputType {deserialize_from_bytes(x.unwrap()).unwrap()})

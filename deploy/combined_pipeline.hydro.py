@@ -58,18 +58,18 @@ async def main(args):
 
     localhost = deployment.Localhost()
 
-    redundancy_elimination_workers = 1
+    redundancy_elimination_workers = 200
 
     now = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 
     experiment_name = f"experiment-{now}"
     args = {
-        "region-selector": "aws",
-        "replication-factor": "2",
+        "region-selector": "aws|azure",
+        "replication-factor": "5",
         #"output-file-name": "/dev/null",
-        "batch-size": "10",
-        "network-file": "/Users/tbang/git/sky-pie-precomputer/network_cost_v2.csv",
-        "object-store-file": "/Users/tbang/git/sky-pie-precomputer/storage_pricing.csv",
+        "batch-size": "200",
+        "network-file": "/home/tbang/sky-pie-precomputer/network_cost_v2.csv",
+        "object-store-file": "/home/tbang/sky-pie-precomputer/storage_pricing.csv",
         "redundancy-elimination-workers": redundancy_elimination_workers,
         #"output_candidates": ""
         "experiment-name": experiment_name,
