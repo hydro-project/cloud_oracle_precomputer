@@ -10,8 +10,8 @@ async def main(args):
         "replication-factor": "3",
         "output-file-name": "/dev/null",
         "batch-size": "200",
-        "network-file": "/Users/tbang/git/sky-pie-precomputer/network_cost_v2.csv",
-        "object-store-file": "/Users/tbang/git/sky-pie-precomputer/storage_pricing.csv",
+        "network-file": "/home/eecs/tbang/git/sky-pie-precomputer/network_cost_v2.csv",
+        "object-store-file": "/home/eecs/tbang/git/sky-pie-precomputer/storage_pricing.csv",
         "experiment-name": "test",
         "redundancy-elimination-workers": "0",
         #"output_candidates": ""
