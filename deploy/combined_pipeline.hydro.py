@@ -72,7 +72,8 @@ async def main(args):
         "object-store-file": "/Users/tbang/git/sky-pie-precomputer/storage_pricing.csv",
         "redundancy-elimination-workers": redundancy_elimination_workers,
         #"output_candidates": ""
-        "experiment-name": experiment_name
+        "experiment-name": experiment_name,
+        "influx-host": "flaminio.millennium.berkeley.edu",
     }
     # Convert args to a list of strings with --key=value format
     args = [f"--{key}={value}" for key, value in args.items()]

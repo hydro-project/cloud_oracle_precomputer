@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use clap::Parser;
 use hydroflow::{util::cli::{ConnectedDirect, ConnectedSource}};
 
-use skypie_lib::{candidate_policies_reduce_hydroflow, Args, Loader, ApplicationRegion};
+use skypie_lib::{candidate_policies_reduce_hydroflow, Args, Loader, ApplicationRegion, influx_logger::{InfluxLogger, InfluxLoggerConfig}};
 
 #[hydroflow::main]
 async fn main() {
@@ -35,7 +35,14 @@ async fn main() {
     let output_candidates_file_name: String = args.output_candidates_file_name.unwrap_or(PathBuf::from("/dev/null")).to_str().unwrap().into();
     let output_file_name = args.output_file_name.unwrap_or(PathBuf::from("/dev/null")).to_str().unwrap().into();
 
-    let flow = candidate_policies_reduce_hydroflow(regions, input_recv, args.batch_size, args.experiment_name, output_candidates_file_name, output_file_name);
+    let logger = InfluxLogger::new(InfluxLoggerConfig{
+        host: args.influx_host.unwrap(),
+        port: 8086,
+        database: "skypie".to_string(),
+        measurement: "test".to_string(),
+    });
+
+    let flow = candidate_policies_reduce_hydroflow(regions, input_recv, args.batch_size, args.experiment_name, output_candidates_file_name, output_file_name, logger);
 
     println!("Launching candidate and reduce");
     hydroflow::util::cli::launch_flow(flow).await;

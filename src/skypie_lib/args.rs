@@ -43,4 +43,7 @@ pub struct Args {
 
     #[clap(long)]
     pub executor_name: Option<String>,
+
+    #[clap(long)]
+    pub influx_host: Option<String>,
 }

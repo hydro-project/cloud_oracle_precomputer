@@ -13,7 +13,7 @@ pub type OutputType = Decision;
 pub type InputConnection = std::pin::Pin<Box<dyn Stream<Item = Result<BytesMut, std::io::Error>> + Send + Sync>>;
 pub type OutputConnection = std::pin::Pin<Box<dyn Sink<Bytes, Error = std::io::Error> + Send + Sync>>;
 
-pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<ApplicationRegion>, input: InputConnection, batch_size: usize, experiment_name: String, output_candidates_file_name: String, output_file_name: String) -> hydroflow::scheduled::graph::Hydroflow
+pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<ApplicationRegion>, input: InputConnection, batch_size: usize, experiment_name: String, output_candidates_file_name: String, output_file_name: String, logger: InfluxLogger) -> hydroflow::scheduled::graph::Hydroflow
 {
     {
         // Validate application regions
@@ -32,12 +32,6 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
     
     }
 
-    let logger = InfluxLogger::new(InfluxLoggerConfig{
-        host: "localhost".to_string(),
-        port: 8086,
-        database: "skypie".to_string(),
-        measurement: "test".to_string(),
-    });
     let logger_sink = Box::pin(logger.into_sink::<SkyPieLogEntry>());
 
     /* let mut input_monitor = MonitorNOOP::new(0); //MonitorMovingAverage::new(1000);
