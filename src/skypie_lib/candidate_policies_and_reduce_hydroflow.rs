@@ -184,13 +184,17 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
         // Find the bug above
 
         // Output candidates
+        /*
         candidates
         -> map(|d: Decision| -> OutputDecision {d.into()})
         //-> map(|d: DecisionRef| -> OutputDecision {d.into()})
         -> map(|d|serde_json::to_string(&d).unwrap())
         -> dest_file(output_candidates_file_name, false);
+        */
 
          // Measure candidate cycle time here
+        source_in[time] -> null();
+        /*
          candidates
          -> map(|_: _| (1, std::time::Instant::now()))
          -> reduce::<'tick>(|acc: &mut (usize, std::time::Instant), (len, start_time)|{
@@ -205,6 +209,7 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
          -> map(|(t, _i, len)|SkyPieLogEntry::new(t, len as u64, "candidates".to_string(), experiment_name.clone()))
          //-> inspect(|x|{println!("{}: {:?}", context.current_tick(), x);})
          -> logger_sink;
+         */
 
         // Push into reduce_oracle
         /* candidates -> map(|x: DecisionRef|{
@@ -284,6 +289,9 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
             reduce_output_monitor.print("Optimal:", optimal_log_interval);
         });
 
+        // Time of optimal
+        batches[time] -> null();
+            /*
         measurement = zip();
         batches[time] -> enumerate() -> [0]measurement;
         optimal -> map(|x|(x.len(), std::time::Instant::now())) -> [1]measurement;
@@ -298,6 +306,7 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
         -> map(|(len, duration, _epoch)|SkyPieLogEntry::new(duration, len as u64, "optimal".to_string(), experiment_name.clone()))
         //-> inspect(|x|{println!("{}: {:?}", context.current_tick(), x);})
         -> logger_sink;
+        */
 
     };
 
