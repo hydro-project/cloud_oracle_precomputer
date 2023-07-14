@@ -1,3 +1,5 @@
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use itertools::Itertools;
 use numpy::ndarray::Dim;
 use numpy::PyArray;
@@ -163,6 +165,12 @@ impl Decision {
 
 impl From<Decision> for OutputDecision {
     fn from(decision_ref: Decision) -> Self {
+        
+        // Get timestamp of current time of day
+        let now = SystemTime::now();
+        // Convert into seconds since UNIX epoch
+        let now_secs = now.duration_since(UNIX_EPOCH).unwrap().as_secs();
+
         let mut cost_wl_halfplane: Vec::<f64> = Vec::with_capacity(2 + decision_ref.cost_iter().len());
         
         cost_wl_halfplane.push(0.0);
@@ -175,7 +183,7 @@ impl From<Decision> for OutputDecision {
         let replication_scheme: OutputScheme = decision_ref.into();
         
         //let cost_wl_halfplane = ;
-        OutputDecision { replication_scheme, cost_wl_halfplane }
+        OutputDecision { replication_scheme, cost_wl_halfplane, timestamp: now_secs }
     }
 }
 
@@ -330,6 +338,11 @@ impl From<DecisionRef<'_>> for Decision {
 
 impl From<DecisionRef<'_>> for OutputDecision {
     fn from(decision_ref: DecisionRef<'_>) -> Self {
+        // Get timestamp of current time of day
+        let now = SystemTime::now();
+        // Convert into seconds since UNIX epoch
+        let now_secs = now.duration_since(UNIX_EPOCH).unwrap().as_secs();
+
         let mut cost_wl_halfplane: Vec::<f64> = Vec::with_capacity(2 + decision_ref.cost_iter().len());
         
         cost_wl_halfplane.push(0.0);
@@ -342,12 +355,13 @@ impl From<DecisionRef<'_>> for OutputDecision {
         let replication_scheme: OutputScheme = decision_ref.into();
         
         //let cost_wl_halfplane = ;
-        OutputDecision { replication_scheme, cost_wl_halfplane }
+        OutputDecision { replication_scheme, cost_wl_halfplane, timestamp: now_secs }
     }
 }
 
 impl From<DecisionRef<'_>> for OutputScheme {
     fn from(decision_ref: DecisionRef<'_>) -> Self {
+        
         let object_stores = decision_ref.write_choice.object_stores.into_iter().map(|o| format!("{}-{}", o.region.name, o.name)).collect_vec();
         let app_assignments = decision_ref.read_choice.iter().map(|(region, object_store)| OutputAssignment{app: region.region.name.clone(), object_store: format!("{}-{}", object_store.region.name, object_store.name)}).collect_vec();
         OutputScheme{object_stores, app_assignments}

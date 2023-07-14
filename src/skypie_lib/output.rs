@@ -12,6 +12,8 @@ pub struct OutputDecision {
     pub replication_scheme: OutputScheme,
     #[serde(rename = "costWLHalfplane")]
     pub cost_wl_halfplane: Vec<f64>,
+    // Seconds with unix epoch
+    pub timestamp: u64
 }
 
 #[derive(Debug, Serialize)]
