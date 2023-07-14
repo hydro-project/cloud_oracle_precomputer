@@ -4,7 +4,7 @@ use hydroflow::{hydroflow_syntax, tokio_stream::{Stream}, bytes::{BytesMut, Byte
 use itertools::Itertools;
 use pyo3::{Python, PyAny, Py, types::PyModule};
 
-use crate::{skypie_lib::{write_choice::WriteChoice, opt_assignments::opt_assignments, merge_policies::{MergeIterator}, decision::{Decision}, object_store::ObjectStore, self, reduce_oracle_hydroflow::BatcherMap, identifier::Identifier, monitor::MonitorNOOP, output::OutputDecision}, ApplicationRegion, influx_logger::{InfluxLogger, InfluxLoggerConfig}, SkyPieLogEntry};
+use crate::{skypie_lib::{write_choice::WriteChoice, opt_assignments::opt_assignments, merge_policies::{MergeIterator}, decision::{Decision}, object_store::ObjectStore, self, reduce_oracle_hydroflow::BatcherMap, identifier::Identifier, monitor::{MonitorNOOP, MonitorMovingAverage}, output::OutputDecision}, ApplicationRegion, influx_logger::{InfluxLogger, InfluxLoggerConfig}, SkyPieLogEntry};
 
 pub type InputType = WriteChoice;
 pub type OutputType = Decision;
@@ -59,8 +59,8 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
     let mut reduce_input_monitor = MonitorNOOP::new(1000); //MonitorMovingAverage::new(1000);
     let mut reduce_batch_monitor = MonitorNOOP::new(1000); //MonitorMovingAverage::new(1000);
     let batch_logging_frequency = Some(1);
-    let mut reduce_output_monitor = MonitorNOOP::new(0); //MonitorMovingAverage::new(1000);
-    let optimal_log_interval = Some(1);
+    let mut reduce_output_monitor =  MonitorMovingAverage::new(1000); // MonitorNOOP::new(0);
+    let optimal_log_interval = Some(1000);
 
     let flow = hydroflow_syntax! {
         source_in = source_stream(input) -> map(|x| -> InputType {deserialize_from_bytes(x.unwrap()).unwrap()})

@@ -22,6 +22,7 @@ which = "4.4.0"
 lazy_static = "1.4.0"
 influxdb = { version = "0.7.0", features = ["derive"] }
 #influxdb = { version = "0.7.0", default-features = false,features = ["derive", "use-serde", "reqwest-client"] }
+rand = "0.8.5"
 
 #[dependencies.pyo3]
 #version = "0.18.3"

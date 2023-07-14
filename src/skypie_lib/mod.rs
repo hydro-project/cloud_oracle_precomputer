@@ -26,3 +26,4 @@ pub mod reduce_oracle_hydroflow;
 pub mod influx_logger;
 pub mod log_entry;
 pub mod output;
+pub mod iter_stream_batches;

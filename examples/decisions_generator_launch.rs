@@ -7,6 +7,7 @@ use hydroflow::util::cli::{ConnectedDirect, ConnectedSink};
 use hydroflow::util::{serialize_to_bytes};
 use hydroflow::hydroflow_syntax;
 use itertools::Itertools;
+use skypie_lib::skypie_lib::iter_stream_batches::iter_stream_batches;
 use skypie_lib::skypie_lib::network_record::NetworkCostMap;
 use skypie_lib::skypie_lib::read_choice::ReadChoice;
 use skypie_lib::{ApplicationRegion, Decision, Region, WriteChoice, Args};
@@ -75,6 +76,11 @@ async fn main() {
 
     type Output = skypie_lib::skypie_lib::candidate_policies_hydroflow::OutputType;
 
+    let iter_batch_size = 10;
+    let combo_batches_stream = iter_stream_batches(create_dummy_decisions(num_dummy_decisions as u16).into_iter().cycle().take(num_decisions), iter_batch_size);
+
+    //
+
     let flow = hydroflow_syntax!{
         // Generate dummy decisions and then take the first num_decisions via zip
         /* cycle_decisions = source_iter(create_dummy_decisions().into_iter().cycle());
@@ -84,7 +90,7 @@ async fn main() {
         });
         cycle_decisions -> [0]decisions;
         num_decisions -> [1]decisions; */
-        decisions = source_iter(create_dummy_decisions(num_dummy_decisions as u16).into_iter().cycle().take(num_decisions));
+        decisions = source_stream(combo_batches_stream);
 
         decisions -> map(|d: Output|{
             let b = serialize_to_bytes(d);

@@ -2,11 +2,12 @@ use std::{sync::atomic::{compiler_fence, Ordering::SeqCst}};
 
 use clap::Parser;
 use itertools::Itertools;
+use rand::Rng;
 
 use hydroflow::hydroflow_syntax;
 use hydroflow::util::cli::{ConnectedDemux, ConnectedDirect, ConnectedSink};
 use hydroflow::util::serialize_to_bytes;
-use skypie_lib::{influx_logger::{InfluxLogger, InfluxLoggerConfig}, skypie_lib::output::OutputWrapper};
+use skypie_lib::{influx_logger::{InfluxLogger, InfluxLoggerConfig}, skypie_lib::{output::OutputWrapper, iter_stream_batches::iter_stream_batches}};
 use skypie_lib::skypie_lib::args::Args;
 use skypie_lib::skypie_lib::monitor::MonitorMovingAverage;
 use skypie_lib::{Loader, SkyPieLogEntry};
@@ -55,8 +56,14 @@ async fn main() {
     });
     let logger_sink = Box::pin(logger.into_sink::<SkyPieLogEntry>());
 
+    let mut rng = rand::thread_rng();
+
+    let iter_batch_size = args.batch_size*20;
+    let combo_batches_stream = iter_stream_batches(object_stores.into_iter().combinations(replication_factor)
+        , iter_batch_size);
+
     let flow = hydroflow_syntax! {
-        write_choices = source_iter(object_stores.into_iter().combinations(replication_factor))
+        write_choices = source_stream(combo_batches_stream)
         -> demux(|v, var_args!(out,time)| {
             let now = std::time::Instant::now();
             compiler_fence(SeqCst);
@@ -71,8 +78,8 @@ async fn main() {
             output_monitor.print("Write choices:", Some(output_log_frequency));
         })
         // Round robin send to the next stage
-        -> enumerate()
-        -> map(|(i, x)| (i % redundancy_elimination_workers, x))
+        //-> enumerate()
+        -> map(|x| (rng.gen_range(0..redundancy_elimination_workers), x))
         -> demux(|v, var_args!(out, time)|{
             let now = std::time::Instant::now();
             compiler_fence(SeqCst);
