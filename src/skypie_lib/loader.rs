@@ -160,7 +160,7 @@ impl Loader {
         let object_stores: Vec<ObjectStore> = iter
             .map(|x| x.unwrap().into())
             .filter(|r: &ObjectStoreStruct| re.is_match(&r.region.name))
-            
+            .map(|o|ObjectStore::new(o))
             // Combine object stores with identical names
             .fold(HashMap::new(), |mut agg, mut object_store| {
                 let name = object_store.name.clone();

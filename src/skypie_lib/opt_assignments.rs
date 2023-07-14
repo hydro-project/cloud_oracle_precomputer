@@ -96,7 +96,7 @@ mod tests {
 
     use crate::skypie_lib::{
         network_record::NetworkCostMap,
-        object_store::{Cost, ObjectStore},
+        object_store::{Cost, ObjectStore, ObjectStoreStruct},
         range::Range,
         region::Region,
         write_choice::WriteChoice,
@@ -116,7 +116,7 @@ mod tests {
         )]);
         cost1.add_egress_costs(egress_cost);
         //let o1 = ObjectStore::new(ObjectStoreStruct{id: 0, cost: cost1, region: Region { name: "".to_string()}, name: "".to_string()});
-        let o1 = ObjectStore {
+        let o1 = ObjectStore::new(ObjectStoreStruct {
             id: 0,
             cost: cost1,
             region: Region {
@@ -124,7 +124,7 @@ mod tests {
                 name: "".to_string(),
             },
             name: "".to_string(),
-        };
+        });
 
         let mut cost2 = Cost::new(2.0, "get request");
         let egress_cost = NetworkCostMap::from_iter(vec![(
@@ -136,7 +136,7 @@ mod tests {
         )]);
         cost2.add_egress_costs(egress_cost);
         //let o2 = ObjectStore::new(ObjectStoreStruct{id: 1, cost: cost2, region: Region { name: "".to_string()}, name: "".to_string()});
-        let o2 = ObjectStore {
+        let o2 = ObjectStore::new(ObjectStoreStruct {
             id: 1,
             cost: cost2,
             region: Region {
@@ -144,7 +144,7 @@ mod tests {
                 name: "".to_string(),
             },
             name: "".to_string(),
-        };
+        });
 
         let write_choice = WriteChoice {
             object_stores: vec![o1.clone(), o2.clone()],

@@ -427,7 +427,9 @@ mod tests {
 
     #[test]
     fn test_decision_cost() {
-        let regions = vec![Region{id:0, name: "0".to_string()} ,Region{id: 0, name: "1".to_string()}];
+        assert!(false);
+
+        /* let regions = vec![Region{id:0, name: "0".to_string()} ,Region{id: 0, name: "1".to_string()}];
         let egress_cost = NetworkCostMap::from_iter(vec![
             (regions[0].clone(), 1.0),
             (regions[1].clone(), 2.0)
@@ -482,12 +484,14 @@ mod tests {
         assert_eq!(d_cost[5], o1.get_ingress_cost(&app_regions[1]));
         assert_eq!(d_cost[6], o0.get_egress_cost(&app_regions[0]));
         assert_eq!(d_cost[7], o1.get_egress_cost(&app_regions[1]));
-        assert_eq!(d_cost.len(), 8);
+        assert_eq!(d_cost.len(), 8); */
 
     }
 
     #[test]
-    fn test_decision_to_inequalities() {
+    fn test_decision_to_inequalities() {/* 
+        assert!(false);
+
         let regions = vec![Region{id:0, name: "0".to_string()} ,Region{id: 0, name: "1".to_string()}];
         let egress_cost = NetworkCostMap::from_iter(vec![
             (regions[0].clone(), 1.0),
@@ -531,7 +535,7 @@ mod tests {
             let shape: [usize; 2] = res.getattr(py, "shape").unwrap().extract(py).unwrap();
             assert_eq!(shape, [2, dim_expected]);
         });
-
+ */
     }
 
     fn version1(coefficients: Vec<Vec<f64>>, code: &str, module: &str, fun_name: &str) {

@@ -176,25 +176,19 @@ impl Hash for ObjectStoreStruct {
     }
 }
 
-//pub type ObjectStore = Box<ObjectStoreStruct>;
-pub type ObjectStore = ObjectStoreStruct;
+pub type ObjectStore = Box<ObjectStoreStruct>;
+//pub type ObjectStore = ObjectStoreStruct;
 type OptRange = (ObjectStore, Range);
 
 // Implement slo compatibility check
 impl ObjectStoreStruct {
     pub fn new(id: u16) -> ObjectStore {
-        ObjectStoreStruct {
+        ObjectStore::new(ObjectStoreStruct {
             id: id,
             name: String::from(""),
             region: Region::default(),
             cost: Cost { size_cost: 0.0, put_cost: 0.0, put_transfer: 0.0, get_cost: 0.0, get_transfer: 0.0, egress_cost: NetworkCostMap::new(), ingress_cost: NetworkCostMap::new() }
-        }
-        /* ObjectStore::new(ObjectStoreStruct {
-            id: id,
-            name: String::from(""),
-            region: Region { name: String::from("") },
-            cost: Cost { size_cost: 0.0, put_cost: 0.0, put_transfer: 0.0, get_cost: 0.0, get_transfer: 0.0, egress_cost: NetworkCostMap::new(), ingress_cost: NetworkCostMap::new() }
-        }) */
+        })
     }
 
     pub fn is_compatible_with(&self, _r: &Region) -> bool {
@@ -270,6 +264,6 @@ impl ObjectStoreStruct {
 
 impl Default for ObjectStore {
     fn default() -> Self {
-        ObjectStore{id: u16::MAX, name: "".to_string(), cost: Cost::default(), region: Region::default()}
+        ObjectStore::new(ObjectStoreStruct{id: u16::MAX, name: "".to_string(), cost: Cost::default(), region: Region::default()})
     }
 }
