@@ -3,7 +3,25 @@ import hydro
 async def main(args):
     deployment = hydro.Deployment()
 
-    localhost = deployment.Localhost()
+    gcp_vpc = hydro.GCPNetwork(
+        project="hydro-chrisdouglas",
+    )
+
+    doGCP = True
+    localhost_machine = deployment.Localhost()
+    def create_machine():
+        if doGCP:
+            return deployment.GCPComputeEngineHost(
+                project="hydro-chrisdouglas",
+                machine_type="e2-micro",
+                image="debian-cloud/debian-11",
+                region="us-west1-a",
+                network=gcp_vpc
+            )
+        else:
+            return localhost_machine
+
+    
 
     args = {
         "region-selector": "aws",
@@ -22,7 +40,7 @@ async def main(args):
     generator_service = deployment.HydroflowCrate(
         src=".",
         example="decisions_generator_launch",
-        on=localhost,
+        on=create_machine(),
         display_id="generator",
         args=args
     )
@@ -31,7 +49,7 @@ async def main(args):
         src=".",
         example="decisions_counter_launch",
         #example="counter",
-        on=localhost,
+        on=create_machine(),
         display_id="counter",
         args=args
     )
