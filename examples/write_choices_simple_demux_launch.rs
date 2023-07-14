@@ -64,7 +64,7 @@ async fn main() {
     let redundancy_elimination_workers: u32 = args.redundancy_elimination_workers;
 
     let mut output_monitor = MonitorMovingAverage::new(1000);
-    let output_log_frequency = 100;
+    let output_log_frequency = 10000;
 
     let logger = InfluxLogger::new(InfluxLoggerConfig {
         host: args.influx_host.unwrap(),
@@ -78,7 +78,7 @@ async fn main() {
 
     let object_store_ids = object_stores.iter().map(|x| x.id).collect::<Vec<_>>();
 
-    let iter_batch_size = 20; //args.batch_size*20;
+    let iter_batch_size = 2000; //args.batch_size*20;
     let iter = IterWrapper::new(object_store_ids, replication_factor);
     //let iter = object_stores.into_iter().map(|x| vec![x]);
     let combo_batches_stream = iter_stream_batches(iter, iter_batch_size);
