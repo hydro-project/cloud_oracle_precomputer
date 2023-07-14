@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::Parser;
 use hydroflow::{util::cli::{ConnectedDirect, ConnectedSource}};
 
@@ -30,7 +32,10 @@ async fn main() {
     let data = Box::new(loader.app_regions);
     let regions: &'static Vec<ApplicationRegion> = Box::leak(data);
 
-    let flow = candidate_policies_reduce_hydroflow(regions, input_recv, args.batch_size, args.experiment_name);
+    let output_candidates_file_name: String = args.output_candidates_file_name.unwrap_or(PathBuf::from("/dev/null")).to_str().unwrap().into();
+    let output_file_name = args.output_file_name.unwrap_or(PathBuf::from("/dev/null")).to_str().unwrap().into();
+
+    let flow = candidate_policies_reduce_hydroflow(regions, input_recv, args.batch_size, args.experiment_name, output_candidates_file_name, output_file_name);
 
     println!("Launching candidate and reduce");
     hydroflow::util::cli::launch_flow(flow).await;

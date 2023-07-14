@@ -13,7 +13,11 @@ pub struct Args {
 
     /// Output file name
     #[clap(short = 'o', long)]
-    pub output_file_name: PathBuf,
+    pub output_file_name: Option<PathBuf>,
+    
+    /// Output file name for candidates
+    #[clap(long)]
+    pub output_candidates_file_name: Option<PathBuf>,
 
     /// Batch size
     #[clap(short = 'b', long)]
@@ -31,9 +35,12 @@ pub struct Args {
     #[clap(long)]
     pub output_candidates: bool,
 
-    #[clap(long, short)]
+    #[clap(long)]
     pub redundancy_elimination_workers: u32,
 
     #[clap(long, short)]
     pub experiment_name: String,
+
+    #[clap(long)]
+    pub executor_name: Option<String>,
 }

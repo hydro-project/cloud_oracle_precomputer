@@ -1,8 +1,6 @@
 use std::fmt::Debug;
 use std::{
     future::Future,
-    pin::Pin,
-    task::{Context, Poll},
 };
 
 use hydroflow::futures::{self, Sink};

@@ -1,7 +1,7 @@
 import hydro
 from datetime import datetime
 
-def create_scale_up_service(deployment, *args, num_scale_up, display_id, **kwargs):
+def create_scale_up_service(deployment, *args, num_scale_up, display_id, kwargs_instances=dict(), **kwargs):
     """
     Creates a scale-up service by generating 'n' identical instances of a sercice, i.e.,HydroflowCrate.
 
@@ -29,7 +29,8 @@ def create_scale_up_service(deployment, *args, num_scale_up, display_id, **kwarg
         yield deployment.HydroflowCrate(
             *args,
             display_id=f"{display_id}:{i}",
-            **kwargs
+            **kwargs,
+            **(kwargs_instances.get(i, {}))
         )
 
 def send_to_demux(src_service, dest_services):
@@ -61,17 +62,17 @@ async def main(args):
 
     now = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 
+    experiment_name = f"experiment-{now}"
     args = {
         "region-selector": "aws",
-        "replication-factor": "1",
-        "output-file-name": "/dev/null",
-        "batch-size": "200",
+        "replication-factor": "2",
+        #"output-file-name": "/dev/null",
+        "batch-size": "10",
         "network-file": "/Users/tbang/git/sky-pie-precomputer/network_cost_v2.csv",
         "object-store-file": "/Users/tbang/git/sky-pie-precomputer/storage_pricing.csv",
         "redundancy-elimination-workers": redundancy_elimination_workers,
         #"output_candidates": ""
-        #"experiment-name": f"test-{now}"
-        "experiment-name": f"test"
+        "experiment-name": experiment_name
     }
     # Convert args to a list of strings with --key=value format
     args = [f"--{key}={value}" for key, value in args.items()]
@@ -93,7 +94,9 @@ async def main(args):
         #example="counter",
         on=localhost,
         display_id="candidate_reduce",
-        args=args
+        #args=args,
+        # '--output-candidates-file-name', f'candidates_{i}.jsonl',
+        kwargs_instances={i: {"args":(args + ['--executor-name', f"candidate_executor_{i}", '-o', f'{experiment_name}_optimal_{i}.jsonl'])} for i in range(redundancy_elimination_workers)},
         )]
 
     ## Connect named ports of services

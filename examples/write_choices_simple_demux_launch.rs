@@ -6,7 +6,7 @@ use itertools::Itertools;
 use hydroflow::hydroflow_syntax;
 use hydroflow::util::cli::{ConnectedDemux, ConnectedDirect, ConnectedSink};
 use hydroflow::util::serialize_to_bytes;
-use skypie_lib::influx_logger::{InfluxLogger, InfluxLoggerConfig};
+use skypie_lib::{influx_logger::{InfluxLogger, InfluxLoggerConfig}, skypie_lib::output::OutputWrapper};
 use skypie_lib::skypie_lib::args::Args;
 use skypie_lib::skypie_lib::monitor::MonitorMovingAverage;
 use skypie_lib::{Loader, SkyPieLogEntry};
@@ -24,6 +24,11 @@ async fn main() {
         &args.region_selector,
     );
 
+    // Write basic stats to file
+    let stats = OutputWrapper::new(loader.object_stores.clone(), vec![], vec![], args.replication_factor.clone() as u64);
+    let stats_file_name = format!("{}_stats.json", args.experiment_name);
+    stats.save_json(&stats_file_name);
+
     // Get ports
     let output_send = ports
         .port("output")
@@ -33,6 +38,9 @@ async fn main() {
 
     //let regions = loader.regions;
     let object_stores = loader.object_stores;
+    // XXX: For debugging
+    //let object_stores = object_stores.into_iter().take(10).collect::<Vec<_>>();
+
     let replication_factor = args.replication_factor;
     let redundancy_elimination_workers: u32 = args.redundancy_elimination_workers;
 
@@ -43,7 +51,7 @@ async fn main() {
         host: "localhost".to_string(),
         port: 8086,
         database: "skypie".to_string(),
-        measurement: args.experiment_name,
+        measurement: "test".to_string(),
     });
     let logger_sink = Box::pin(logger.into_sink::<SkyPieLogEntry>());
 
@@ -78,8 +86,7 @@ async fn main() {
         serialized[time] -> map(|_|{1}) -> reduce::<'tick>(|acc: &mut u64, i|{*acc = *acc + i;}) -> [1]measurement;
         measurement = zip() -> map(|(start_time, count)|(start_time.elapsed().as_secs_f64(), count))
         -> map(|(cycle_time, count)|{
-            let epoch = context.current_tick();
-            SkyPieLogEntry::new(cycle_time,count,epoch as u64,"write_choices".to_string())
+            SkyPieLogEntry::new(cycle_time,count,"write_choices".to_string(), args.experiment_name.clone())
         })
         -> dest_sink(logger_sink);
 

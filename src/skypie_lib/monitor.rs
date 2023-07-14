@@ -95,11 +95,8 @@ pub struct MonitorNOOP {
 }
 
 impl MonitorNOOP {
-    pub fn new(size: usize) -> Self {
+    pub fn new(_size: usize) -> Self {
         Self {}
-    }
-
-    fn add_arrival_time(&mut self, _time: std::time::Instant) {
     }
 
     pub fn add_arrival_time_now(&mut self) {
