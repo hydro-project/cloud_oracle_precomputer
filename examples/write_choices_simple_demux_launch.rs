@@ -7,10 +7,28 @@ use rand::Rng;
 use hydroflow::hydroflow_syntax;
 use hydroflow::util::cli::{ConnectedDemux, ConnectedDirect, ConnectedSink};
 use hydroflow::util::serialize_to_bytes;
-use skypie_lib::{influx_logger::{InfluxLogger, InfluxLoggerConfig}, skypie_lib::{output::OutputWrapper, iter_stream_batches::iter_stream_batches}};
+use skypie_lib::{influx_logger::{InfluxLogger, InfluxLoggerConfig}, skypie_lib::{output::OutputWrapper, iter_stream_batches::iter_stream_batches, object_store::ObjectStore}};
 use skypie_lib::skypie_lib::args::Args;
 use skypie_lib::skypie_lib::monitor::MonitorMovingAverage;
 use skypie_lib::{Loader, SkyPieLogEntry};
+
+struct IterWrapper {
+    iter: itertools::Combinations<std::vec::IntoIter<ObjectStore>>,
+}
+
+impl IterWrapper {
+    pub fn new(object_stores: Vec<ObjectStore>, n: usize) -> IterWrapper {
+        IterWrapper { iter: object_stores.into_iter().combinations(n) }
+    }
+}
+
+impl Iterator for IterWrapper {
+    type Item = Vec<ObjectStore>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
+    }
+}
 
 #[hydroflow::main]
 async fn main() {
@@ -58,12 +76,14 @@ async fn main() {
 
     let mut rng = rand::thread_rng();
 
-    let iter_batch_size = args.batch_size*20;
-    let combo_batches_stream = iter_stream_batches(object_stores.into_iter().combinations(replication_factor)
-        , iter_batch_size);
+    let iter_batch_size = 20; //args.batch_size*20;
+    let iter = IterWrapper::new(object_stores, replication_factor);
+    //let iter = object_stores.into_iter().map(|x| vec![x]);
+    let combo_batches_stream = iter_stream_batches(iter, iter_batch_size);
 
     let flow = hydroflow_syntax! {
         write_choices = source_stream(combo_batches_stream)
+        //-> inspect(|_|{println!(".");})
         -> demux(|v, var_args!(out,time)| {
             let now = std::time::Instant::now();
             compiler_fence(SeqCst);
