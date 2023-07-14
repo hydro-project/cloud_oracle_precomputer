@@ -13,7 +13,7 @@ pub type OutputType = Decision;
 pub type InputConnection = std::pin::Pin<Box<dyn Stream<Item = Result<BytesMut, std::io::Error>> + Send + Sync>>;
 pub type OutputConnection = std::pin::Pin<Box<dyn Sink<Bytes, Error = std::io::Error> + Send + Sync>>;
 
-pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<ApplicationRegion>, input: InputConnection, batch_size: usize, experiment_name: String, output_candidates_file_name: String, output_file_name: String, logger: InfluxLogger) -> hydroflow::scheduled::graph::Hydroflow
+pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<ApplicationRegion>, input: InputConnection, batch_size: usize, experiment_name: String, output_candidates_file_name: String, output_file_name: String, logger: InfluxLogger, object_store_id_map: HashMap<u16, ObjectStore>) -> hydroflow::scheduled::graph::Hydroflow
 {
     {
         // Validate application regions
@@ -63,7 +63,7 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
     let optimal_log_interval = Some(100);
 
     let flow = hydroflow_syntax! {
-        source_in = source_stream(input) -> map(|x| -> InputType {deserialize_from_bytes(x.unwrap()).unwrap()})
+        source_in = source_stream(input) -> map(|x| -> Vec<u16> {deserialize_from_bytes(x.unwrap()).unwrap()})
         -> inspect(|_|{
             input_monitor.add_arrival_time_now();
             input_monitor.print("Input:", Some(1000));
@@ -126,7 +126,13 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
         -> tee(); */
 
         // Non-hydro version
-        candidates = source_in[out] -> map(|write_choice| {
+        candidates = source_in[out] -> map(|write_choice_ids: Vec<u16>| {
+
+            //object_store_id_map
+            let object_stores = write_choice_ids.iter().map(|id|{
+                object_store_id_map.get(id).unwrap().clone()
+            }).collect_vec();
+            let write_choice = WriteChoice{object_stores};
 
             let write_choice = Box::<WriteChoice>::new(write_choice);
             //let mut i = 0; // for debugging

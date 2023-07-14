@@ -7,6 +7,8 @@ use std::collections::HashMap;
 use std::f64::{NEG_INFINITY,INFINITY};
 use std::hash::{Hash, Hasher};
 
+use super::identifier::Identifier;
+
 #[derive(Clone,Debug, Deserialize, Serialize)]
 pub struct Cost {
     pub size_cost: f64,
@@ -136,7 +138,7 @@ impl From<ObjectStoreStructRaw> for ObjectStoreStruct {
         let name = format!("{}-{}", raw.name, raw.tier);
         let cost: Cost = Cost::new(raw.price_per_unit, &raw.group);
         Self {
-            id: 0,
+            id: u16::MAX,
             region,
             name,
             cost
@@ -152,6 +154,12 @@ pub struct ObjectStoreStruct {
     pub cost: Cost
     //pub get_cost: f64,
     //pub egress_cost: f64
+}
+
+impl Identifier<u16> for ObjectStoreStruct {
+    fn get_id(&self) -> u16 {
+        self.id
+    }
 }
 
 impl PartialEq for ObjectStoreStruct {

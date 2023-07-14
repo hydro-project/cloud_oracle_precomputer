@@ -7,23 +7,23 @@ use rand::Rng;
 use hydroflow::hydroflow_syntax;
 use hydroflow::util::cli::{ConnectedDemux, ConnectedDirect, ConnectedSink};
 use hydroflow::util::serialize_to_bytes;
-use skypie_lib::{influx_logger::{InfluxLogger, InfluxLoggerConfig}, skypie_lib::{output::OutputWrapper, iter_stream_batches::iter_stream_batches, object_store::ObjectStore}};
+use skypie_lib::{influx_logger::{InfluxLogger, InfluxLoggerConfig}, skypie_lib::{output::OutputWrapper, iter_stream_batches::iter_stream_batches}};
 use skypie_lib::skypie_lib::args::Args;
 use skypie_lib::skypie_lib::monitor::MonitorMovingAverage;
 use skypie_lib::{Loader, SkyPieLogEntry};
 
 struct IterWrapper {
-    iter: itertools::Combinations<std::vec::IntoIter<ObjectStore>>,
+    iter: itertools::Combinations<std::vec::IntoIter<u16>>,
 }
 
 impl IterWrapper {
-    pub fn new(object_stores: Vec<ObjectStore>, n: usize) -> IterWrapper {
+    pub fn new(object_stores: Vec<u16>, n: usize) -> IterWrapper {
         IterWrapper { iter: object_stores.into_iter().combinations(n) }
     }
 }
 
 impl Iterator for IterWrapper {
-    type Item = Vec<ObjectStore>;
+    type Item = Vec<u16>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next()
@@ -76,8 +76,10 @@ async fn main() {
 
     let mut rng = rand::thread_rng();
 
+    let object_store_ids = object_stores.iter().map(|x| x.id).collect::<Vec<_>>();
+
     let iter_batch_size = 20; //args.batch_size*20;
-    let iter = IterWrapper::new(object_stores, replication_factor);
+    let iter = IterWrapper::new(object_store_ids, replication_factor);
     //let iter = object_stores.into_iter().map(|x| vec![x]);
     let combo_batches_stream = iter_stream_batches(iter, iter_batch_size);
 
@@ -91,8 +93,9 @@ async fn main() {
             out.give(v);
         });
         // Distribute the write choices among instances of next stage
-        serialized = write_choices[out] -> map(|x| skypie_lib::skypie_lib::candidate_policies_hydroflow::InputType{object_stores: x})
-        -> map(|x:skypie_lib::skypie_lib::candidate_policies_hydroflow::InputType| serialize_to_bytes(x))
+        serialized = write_choices[out] //-> map(|x| skypie_lib::skypie_lib::candidate_policies_hydroflow::InputType{object_stores: x})
+        //-> map(|x:skypie_lib::skypie_lib::candidate_policies_hydroflow::InputType| serialize_to_bytes(x))
+        -> map(|x| serialize_to_bytes(x))
         -> inspect(|_|{
             output_monitor.add_arrival_time_now();
             output_monitor.print("Write choices:", Some(output_log_frequency));

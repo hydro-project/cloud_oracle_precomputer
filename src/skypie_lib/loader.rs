@@ -64,13 +64,27 @@ impl Loader {
         network_file_path: &PathBuf,
         region_pattern: &str,
     ) -> (NetworkCostMaps, Vec<Region>, HashMap<String, Region>) {
+        
         let re = Regex::new(region_pattern).unwrap();
+        
+        let rdr2 = csv::Reader::from_path(network_file_path).unwrap();
+        let iter2: csv::DeserializeRecordsIntoIter<std::fs::File, NetworkRecordRaw> =
+        rdr2.into_deserialize();
+        
+        // Collect all region names, including the destination regions
+        let regions = iter2
+        .map(|r: Result<NetworkRecordRaw, csv::Error>| -> NetworkRecord { r.unwrap().into() })
+        //.inspect(|r| println!("Raw network: {:?}", r))
+        .filter(|r| re.is_match(&r.src.name) && re.is_match(&r.dest.name))
+        .map(|r| {
+            [r.src.clone(), r.dest.clone()]
+        }).flatten().unique().sorted().enumerate().map(|(i, r)| Region{id: i as u16, name: r.name}).collect_vec();
+
+        let region_names: HashMap<String, Region> = HashMap::from_iter(regions.iter().map(|r| (r.name.clone(), r.clone())));
 
         let rdr = csv::Reader::from_path(network_file_path).unwrap();
         let iter: csv::DeserializeRecordsIntoIter<std::fs::File, NetworkRecordRaw> =
             rdr.into_deserialize();
-
-        let mut region_names: HashMap<String, Region> = HashMap::new();
 
         let mut network_costs: NetworkCostMaps = iter
             .map(|r: Result<NetworkRecordRaw, csv::Error>| -> NetworkRecord { r.unwrap().into() })
@@ -79,15 +93,6 @@ impl Loader {
             //.inspect(|r| println!("Filtered network: {:?}", r))
             .fold(NetworkCostMaps::new(), |mut agg, e| {
                 // Collect src/dest region in regions
-                let src_region = Region{id: region_names.len() as u16, name: e.src.name.clone()};
-                {
-                    let _ = region_names.entry(e.src.name.clone()).or_insert(src_region);
-                }
-                
-                let dest_region = Region{id: region_names.len() as u16, name: e.dest.name.clone()};
-                {
-                    let _ = region_names.entry(e.dest.name.clone()).or_insert(dest_region);
-                }
                 
                 let src_region = region_names.get(&e.src.name).unwrap();
 
@@ -99,7 +104,7 @@ impl Loader {
             });
 
         // Collect all region names, including the destination regions
-        let regions =
+        /* let regions =
             /* network_costs
             .iter()
             .flat_map(|x| {
@@ -113,7 +118,7 @@ impl Loader {
             // Set region IDs by sorting and enumerating them
             .sorted()
             .map(|r| r.to_owned())
-            .collect_vec();
+            .collect_vec(); */
 
         // Ensure each region has network costs to itself
         for region in regions.iter() {
@@ -136,9 +141,9 @@ impl Loader {
                 println!("Region: {:?}", r);
             }
         }
-        debug_assert_eq!(regions.len(), unique);
-        debug_assert_eq!(min, 0);
-        debug_assert_eq!(max as usize, regions.len() - 1);
+        assert_eq!(regions.len(), unique);
+        assert_eq!(min, 0);
+        assert_eq!(max as usize, regions.len() - 1);
 
         regions.iter().for_each(|r|{assert!(r.get_id() != u16::MAX, "Found region with id u16::MAX {:?}", r)});
 
@@ -175,7 +180,10 @@ impl Loader {
                 }
 
                 agg
-            }).values()
+            }).into_iter()
+            // Sort by name
+            .sorted_by(|a,b|{a.0.cmp(&b.0)})
+            .map(|(_n,  o)|{o})
             // Filter object stores whose region does not have network costs
             .inspect(|x|{
                 if egress_costs.contains_key(&x.region) && ingress_costs.contains_key(&x.region) {
@@ -201,6 +209,19 @@ impl Loader {
             })
             //.map(|x| ObjectStore::new(x))
             .collect_vec();
+
+        let min = object_stores.iter().map(|r|r.get_id()).min().unwrap();
+        let max = object_stores.iter().map(|r|r.get_id()).max().unwrap();
+        let unique = object_stores.iter().map(|r|r.get_id()).unique().collect_vec().len();
+
+        if object_stores.len() != unique {
+            for r in &object_stores {
+                println!("Object store: {:?}", r);
+            }
+        }
+        assert_eq!(object_stores.len(), unique);
+        assert_eq!(min, 0);
+        assert_eq!(max as usize, object_stores.len() - 1);
 
         return object_stores;
     }
