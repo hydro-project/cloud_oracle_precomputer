@@ -48,7 +48,7 @@ async fn main() {
     let output_log_frequency = 100;
 
     let logger = InfluxLogger::new(InfluxLoggerConfig {
-        host: "localhost".to_string(),
+        host: args.influx_host.unwrap(),
         port: 8086,
         database: "skypie".to_string(),
         measurement: "test".to_string(),
