@@ -35,6 +35,7 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
     let logger_sink = Box::pin(logger.into_sink::<SkyPieLogEntry>());
 
     let mut input_monitor = MonitorNOOP::new(1000); //MonitorNOOP::new(0); //MonitorMovingAverage::new(1000);
+    let input_log_interval = 1;
     //let mut output_monitor = MonitorMovingAverage::new(1000); //MonitorNOOP::new(0);
 
     let module = "";
@@ -66,7 +67,7 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
         source_in = source_stream(input) -> map(|x| -> Vec<u16> {deserialize_from_bytes(x.unwrap()).unwrap()})
         -> inspect(|_|{
             input_monitor.add_arrival_time_now();
-            input_monitor.print("Input:", Some(1000));
+            input_monitor.print("Input:", Some(input_log_interval));
         })
         -> demux(|v, var_args!(out, time)| {
             let now = std::time::Instant::now();
@@ -180,8 +181,6 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
 
             return MergeIterator::new(write_choice, assignments);
         }) -> flatten() -> tee();
-
-        // Find the bug above
 
         // Output candidates
         /*

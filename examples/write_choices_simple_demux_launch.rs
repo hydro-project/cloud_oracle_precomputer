@@ -7,7 +7,7 @@ use rand::Rng;
 use hydroflow::hydroflow_syntax;
 use hydroflow::util::cli::{ConnectedDemux, ConnectedDirect, ConnectedSink};
 use hydroflow::util::serialize_to_bytes;
-use skypie_lib::{influx_logger::{InfluxLogger, InfluxLoggerConfig}, skypie_lib::{output::OutputWrapper, iter_stream_batches::iter_stream_batches}};
+use skypie_lib::{influx_logger::{InfluxLogger, InfluxLoggerConfig}, skypie_lib::{output::OutputWrapper, iter_stream_batches::iter_stream_batches, noop_logger::NoopLogger}};
 use skypie_lib::skypie_lib::args::Args;
 use skypie_lib::skypie_lib::monitor::MonitorMovingAverage;
 use skypie_lib::{Loader, SkyPieLogEntry};
@@ -45,7 +45,7 @@ async fn main() {
 
     // Write basic stats to file
     let stats = OutputWrapper::new(loader.object_stores.clone(), vec![], vec![], args.replication_factor.clone() as u64);
-    let stats_file_name = format!("{}_stats.json", args.experiment_name);
+    let stats_file_name = format!("{}/stats.json", args.experiment_name);
     stats.save_json(&stats_file_name);
 
     // Get ports
@@ -66,12 +66,13 @@ async fn main() {
     let mut output_monitor = MonitorMovingAverage::new(1000);
     let output_log_frequency = 10000;
 
-    let logger = InfluxLogger::new(InfluxLoggerConfig {
+    /* let logger = InfluxLogger::new(InfluxLoggerConfig {
         host: args.influx_host.unwrap(),
         port: 8086,
         database: "skypie".to_string(),
         measurement: "test".to_string(),
-    });
+    }); */
+    let logger = NoopLogger::new();
     let logger_sink = Box::pin(logger.into_sink::<SkyPieLogEntry>());
 
     let mut rng = rand::thread_rng();

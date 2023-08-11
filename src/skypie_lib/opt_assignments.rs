@@ -70,7 +70,7 @@ pub(crate) fn opt_assignments(
             let opt_assignments =
                 agg.into_iter()
                 // XXX: Skipping filtering for debug
-                    .filter(|(_, r)| r.non_empty())
+                    .filter(|(_, r)| r.non_empty() && r.max > 0.0)
                     .inspect(|(_o, _r)| {
                         /* println!(
                             "Optimal assignment: {:?}-{:?}={:?}-{:?}",

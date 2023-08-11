@@ -1,4 +1,5 @@
 import hydro
+import os
 from datetime import datetime
 
 def create_scale_up_service(deployment, *args, num_scale_up, display_id, kwargs_instances=dict(), **kwargs):
@@ -62,16 +63,19 @@ async def main(args):
     now = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     experiment_name = f"experiment-{now}"
 
+    # Create directory for experiment
+    os.mkdir(experiment_name)
+
     print(args)
     if args[0] == "local":
-        redundancy_elimination_workers = 2
+        redundancy_elimination_workers = 1
         replication_factor = 2
 
         args = {
-            "region-selector": "aws|azure",
+            "region-selector": "aws-ap-southeast",
             "replication-factor": replication_factor,
             #"output-file-name": "/dev/null",
-            "batch-size": "200",
+            "batch-size": "36",
             "network-file": "/Users/tbang/git/sky-pie-precomputer/network_cost_v2.csv",
             "object-store-file": "/Users/tbang/git/sky-pie-precomputer/storage_pricing.csv",
             "redundancy-elimination-workers": redundancy_elimination_workers,
@@ -101,6 +105,7 @@ async def main(args):
 
     write_choices_service = deployment.HydroflowCrate(
         src=".",
+        profile="dev",
         #example="write_choices_simple_launch",
         example="write_choices_simple_demux_launch",
         on=localhost,
@@ -110,7 +115,7 @@ async def main(args):
     
     candidates_service = [s for s in create_scale_up_service(deployment,
         num_scale_up=redundancy_elimination_workers,
-        #profile="dev",
+        profile="dev",
         src=".",
         example="candidate_and_reduce_launch",
         #example="counter",
@@ -118,7 +123,7 @@ async def main(args):
         display_id="candidate_reduce",
         #args=args,
         # '--output-candidates-file-name', f'candidates_{i}.jsonl',
-        kwargs_instances={i: {"args":(args + ['--executor-name', f"candidate_executor_{i}", '-o', f'{experiment_name}_optimal_{i}.jsonl'])} for i in range(redundancy_elimination_workers)},
+        kwargs_instances={i: {"args":(args + ['--executor-name', f"candidate_executor_{i}", '-o', f'{experiment_name}/optimal_{i}.jsonl'])} for i in range(redundancy_elimination_workers)},
         )]
 
     ## Connect named ports of services

@@ -98,6 +98,11 @@ impl Loader {
 
                 let dest_region = region_names.get(&e.dest.name).unwrap();
 
+                if src_region == dest_region {
+                    debug_assert_eq!(e.src.name, e.dest.name);
+                    debug_assert_eq!(e.cost, 0.0);
+                }
+
                 let src_map = agg.entry(src_region.clone()).or_insert(HashMap::new());
                 src_map.insert(dest_region.clone(), e.cost);
                 agg
@@ -175,9 +180,9 @@ impl Loader {
                     let region = region_names.get(&region_name).unwrap().clone();
                     object_store.region = region;
                     
-                    let entry = agg.entry(key).or_insert(object_store.clone());
-                    entry.cost.merge(object_store.cost);
                 }
+                let entry = agg.entry(key).or_insert(object_store.clone());
+                entry.cost.merge(object_store.cost);
 
                 agg
             }).into_iter()
@@ -205,6 +210,17 @@ impl Loader {
                 let mut x = x.clone();
                 x.cost.add_ingress_costs(ingress_costs.get(&x.region).unwrap().clone());
                 x.cost.add_egress_costs(egress_costs.get(&x.region).unwrap().clone());
+
+                // Verify that the object store has network costs to applications of its region corresponding to its put/get transfer costs
+                let app_region = ApplicationRegion { region: x.region.clone(), egress_cost: egress_costs.get(&x.region).unwrap().clone(), ingress_cost: ingress_costs.get(&x.region).unwrap().clone() };
+                let region_egress_costs = x.cost.get_egress_cost(&app_region, &x.region);
+                debug_assert_eq!(region_egress_costs, x.cost.get_transfer);
+                let region_ingress_costs = x.cost.get_ingress_cost(&app_region, &x.region);
+                if region_ingress_costs != x.cost.put_transfer {
+                    println!("WARN: Region ingress costs {:?} != put transfer costs {:?} for object store {:?}", region_ingress_costs, x.cost.put_transfer, x);
+                }
+                debug_assert_eq!(region_ingress_costs, x.cost.put_transfer);
+
                 x
             })
             //.map(|x| ObjectStore::new(x))

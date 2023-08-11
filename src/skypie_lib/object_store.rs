@@ -207,7 +207,7 @@ impl ObjectStoreStruct {
     pub fn cost_delta(&self, other: &ObjectStoreStruct, region: &ApplicationRegion) -> f64 {
         let self_egress_cost = self.get_egress_cost(region);
         let other_egress_cost = other.get_egress_cost(region);
-        (self.cost.get_cost - other.cost.get_cost) / (other_egress_cost - self_egress_cost)
+        (self.cost.get_cost - other.cost.get_cost) / -(self_egress_cost - other_egress_cost)
     }
 
     // Implementation of intersection of object stores for a region
@@ -238,8 +238,8 @@ impl ObjectStoreStruct {
         // Probe which object store falls to either side of the intersection
         // and return the tuple of tuples
         let size_probe = size - 1.0;
-        let cost_probe_o = o.cost_probe(&size_probe, r);
-        let cost_probe_p = p.cost_probe(&size_probe, r);
+        let cost_probe_o = o.cost.get_cost + o_egress_cost * size_probe;
+        let cost_probe_p = p.cost.get_cost + p_egress_cost * size_probe;
 
         if cost_probe_o < cost_probe_p {
             return [(o, Range{min:NEG_INFINITY, max:size}), (p, Range{min:size, max:INFINITY})]
