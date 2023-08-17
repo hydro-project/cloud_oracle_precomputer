@@ -1,4 +1,4 @@
-use crate::skypie_lib::decision::Decision;
+use crate::decision::Decision;
 
 pub struct Batcher<Iter>
 where Iter: Iterator<Item = Decision>

@@ -68,20 +68,20 @@ async def main(args):
 
     print(args)
     if args[0] == "local":
-        redundancy_elimination_workers = 1
-        replication_factor = 2
+        redundancy_elimination_workers = 8
+        replication_factor = 3
 
         args = {
-            "region-selector": "aws-ap-southeast",
+            "region-selector": "aws",
             "replication-factor": replication_factor,
             #"output-file-name": "/dev/null",
-            "batch-size": "36",
+            "batch-size": "200",
             "network-file": "/Users/tbang/git/sky-pie-precomputer/network_cost_v2.csv",
             "object-store-file": "/Users/tbang/git/sky-pie-precomputer/storage_pricing.csv",
             "redundancy-elimination-workers": redundancy_elimination_workers,
             #"output_candidates": ""
             "experiment-name": experiment_name,
-            "influx-host": "flaminio.millennium.berkeley.edu",
+            "influx-host": "flaminio.millennium.berkeley.edu"
         }
     else:
         redundancy_elimination_workers = 200
@@ -103,9 +103,14 @@ async def main(args):
     # Convert args to a list of strings with --key=value format
     args = [f"--{key}={value}" for key, value in args.items()]
 
+    # Worker specific args
+    kwargs_instances={
+        i: {"args":(args + ['--executor-name', f"candidate_executor_{i}", '-o', f'{experiment_name}/optimal_{i}.jsonl', "--output-candidates-file-name", f"{experiment_name}/candidates_{i}.jsonl"])} for i in range(redundancy_elimination_workers)
+    }
+
     write_choices_service = deployment.HydroflowCrate(
         src=".",
-        profile="dev",
+        #profile="dev",
         #example="write_choices_simple_launch",
         example="write_choices_simple_demux_launch",
         on=localhost,
@@ -115,7 +120,7 @@ async def main(args):
     
     candidates_service = [s for s in create_scale_up_service(deployment,
         num_scale_up=redundancy_elimination_workers,
-        profile="dev",
+        #profile="dev",
         src=".",
         example="candidate_and_reduce_launch",
         #example="counter",
@@ -123,7 +128,7 @@ async def main(args):
         display_id="candidate_reduce",
         #args=args,
         # '--output-candidates-file-name', f'candidates_{i}.jsonl',
-        kwargs_instances={i: {"args":(args + ['--executor-name', f"candidate_executor_{i}", '-o', f'{experiment_name}/optimal_{i}.jsonl'])} for i in range(redundancy_elimination_workers)},
+        kwargs_instances=kwargs_instances
         )]
 
     ## Connect named ports of services

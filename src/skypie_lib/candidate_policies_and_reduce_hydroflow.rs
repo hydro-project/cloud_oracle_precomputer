@@ -1,10 +1,22 @@
 use std::{sync::atomic::{compiler_fence, Ordering::SeqCst}, collections::HashMap};
 
-use hydroflow::{hydroflow_syntax, tokio_stream::{Stream}, bytes::{BytesMut, Bytes}, util::{deserialize_from_bytes}, futures::Sink, serde_json};
+use hydroflow::{hydroflow_syntax, tokio_stream::Stream, bytes::{BytesMut, Bytes}, util::deserialize_from_bytes, futures::Sink, serde_json};
 use itertools::Itertools;
 use pyo3::{Python, PyAny, Py, types::PyModule};
 
-use crate::{skypie_lib::{write_choice::WriteChoice, opt_assignments::opt_assignments, merge_policies::{MergeIterator}, decision::{Decision}, object_store::ObjectStore, self, reduce_oracle_hydroflow::BatcherMap, identifier::Identifier, monitor::{MonitorNOOP, MonitorMovingAverage}, output::OutputDecision}, ApplicationRegion, influx_logger::{InfluxLogger, InfluxLoggerConfig}, SkyPieLogEntry};
+use crate::{
+    write_choice::WriteChoice,
+    opt_assignments::opt_assignments,
+    decision::Decision,
+    object_store::ObjectStore,
+    output::OutputDecision,
+    reduce_oracle_hydroflow::BatcherMap,
+    identifier::Identifier,
+    monitor::{MonitorNOOP, MonitorMovingAverage},
+    merge_policies::MergeIterator,
+    ApplicationRegion, influx_logger::{InfluxLogger, InfluxLoggerConfig},
+    SkyPieLogEntry
+};
 
 pub type InputType = WriteChoice;
 pub type OutputType = Decision;
@@ -54,7 +66,7 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
     });
     let fun: &Py<PyAny> = &*Box::leak(Box::new(fun));
 
-    type Input = skypie_lib::candidate_policies_hydroflow::OutputType;
+    type Input = crate::candidate_policies_hydroflow::OutputType;
     let mut batcher = BatcherMap::<Input>::new(batch_size);
 
     let mut reduce_input_monitor = MonitorNOOP::new(1000); //MonitorMovingAverage::new(1000);
@@ -183,13 +195,13 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
         }) -> flatten() -> tee();
 
         // Output candidates
-        /*
+        
         candidates
         -> map(|d: Decision| -> OutputDecision {d.into()})
         //-> map(|d: DecisionRef| -> OutputDecision {d.into()})
         -> map(|d|serde_json::to_string(&d).unwrap())
         -> dest_file(output_candidates_file_name, false);
-        */
+       
 
          // Measure candidate cycle time here
         source_in[time] -> null();

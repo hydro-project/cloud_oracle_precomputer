@@ -5,9 +5,9 @@ use numpy::ndarray::Dim;
 use numpy::PyArray;
 use pyo3::{Py, Python};
 
-use crate::skypie_lib::read_choice::ReadChoice;
-use crate::skypie_lib::write_choice::WriteChoice;
-use crate::{ApplicationRegion};
+use crate::read_choice::ReadChoice;
+use crate::write_choice::WriteChoice;
+use crate::ApplicationRegion;
 
 use super::object_store::ObjectStore;
 use super::output::{OutputDecision, OutputScheme, OutputAssignment};
@@ -424,20 +424,20 @@ let inequalities: Vec<f64> = coefficients.iter().fold(Vec::<f64>::new(), |acc, e
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    //use std::collections::HashMap;
 
     use hydroflow::hydroflow_syntax;
-    use itertools::Itertools;
+    //use itertools::Itertools;
     use numpy::ndarray::Dim;
     use numpy::PyArray;
     use pyo3::types::PyModule;
     use pyo3::{Py, PyAny, Python};
     use test::Bencher;
 
-    use crate::skypie_lib::object_store::{ObjectStore, Cost};
-    use crate::skypie_lib::read_choice::ReadChoice;
-    use crate::{Region, ApplicationRegion, Decision, WriteChoice};
-    use crate::skypie_lib::network_record::NetworkCostMap;
+    //use crate::object_store::{ObjectStore, Cost};
+    //use crate::read_choice::ReadChoice;
+    //use crate::{Region, ApplicationRegion, Decision, WriteChoice};
+    //use crate::network_record::NetworkCostMap;
 
     #[test]
     fn test_decision_cost() {

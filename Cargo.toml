@@ -33,7 +33,7 @@ rand = "0.8.5"
 
 [lib]
 name = "skypie_lib"
-path = "src/lib.rs"
+path = "src/skypie_lib/skypie_lib.rs"
 
 [[example]]
 name = "candidate_policies_launch"

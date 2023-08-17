@@ -1,13 +1,12 @@
+use std::collections::HashMap;
+use itertools::Itertools;
+
 use crate::{
-    skypie_lib::{
-        object_store::{ObjectStore, ObjectStoreStruct},
-        range::Range,
-        write_choice::WriteChoice,
-    },
+    object_store::{ObjectStore, ObjectStoreStruct},
+    range::Range,
+    write_choice::WriteChoice,
     ApplicationRegion,
 };
-use itertools::Itertools;
-use std::collections::HashMap;
 
 pub(crate) fn opt_assignments(
     write_choice: Box<WriteChoice>,
@@ -94,7 +93,7 @@ mod tests {
 
     use itertools::Itertools;
 
-    use crate::skypie_lib::{
+    use crate::{
         network_record::NetworkCostMap,
         object_store::{Cost, ObjectStore, ObjectStoreStruct},
         range::Range,

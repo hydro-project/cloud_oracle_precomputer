@@ -1,3 +1,10 @@
+#![feature(exclusive_range_pattern)]
+#![feature(test)]
+extern crate test;
+
+#[macro_use]
+extern crate lazy_static;
+
 pub mod region;
 pub mod object_store;
 pub mod application_region;
@@ -28,3 +35,14 @@ pub mod noop_logger;
 pub mod log_entry;
 pub mod output;
 pub mod iter_stream_batches;
+
+pub use loader::Loader;
+pub use candidate_policies_hydroflow::candidate_policies_hydroflow;
+pub use candidate_policies_and_reduce_hydroflow::candidate_policies_reduce_hydroflow;
+pub use args::Args;
+pub use region::Region;
+pub use write_choice::WriteChoice;
+pub use decision::Decision;
+pub use application_region::ApplicationRegion;
+//pub use influx_logger;
+pub use log_entry::SkyPieLogEntry;

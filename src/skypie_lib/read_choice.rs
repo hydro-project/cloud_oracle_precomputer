@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-use crate::skypie_lib::object_store::ObjectStore;
+use crate::object_store::ObjectStore;
 use crate::ApplicationRegion;
 
 use super::identifier::Identifier;

@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::ApplicationRegion;
-use crate::skypie_lib::network_record::NetworkCostMap;
-use crate::skypie_lib::{region::Region, range::Range};
+use crate::network_record::NetworkCostMap;
+use crate::{region::Region, range::Range};
 use std::collections::HashMap;
 use std::f64::{NEG_INFINITY,INFINITY};
 use std::hash::{Hash, Hasher};

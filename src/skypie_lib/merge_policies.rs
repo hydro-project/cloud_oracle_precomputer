@@ -1,10 +1,10 @@
 use itertools::Itertools;
 
-use crate::ApplicationRegion;
-use crate::skypie_lib::decision::Decision;
-use crate::skypie_lib::object_store::ObjectStore;
-use crate::skypie_lib::read_choice::ReadChoice;
-use crate::skypie_lib::write_choice::WriteChoice;
+pub use crate::ApplicationRegion;
+use crate::decision::Decision;
+use crate::object_store::ObjectStore;
+use crate::read_choice::ReadChoice;
+use crate::write_choice::WriteChoice;
 
 use super::decision::DecisionRef;
 use super::read_choice::ReadChoiceRef;
@@ -214,9 +214,9 @@ impl<'a> Iterator for MergeIteratorRef<'a> {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::{skypie_lib::{object_store::{self, ObjectStore}, merge_policies::AssignmentsRef}, ApplicationRegion, Region};
+    use crate::{object_store::{self, ObjectStore}, merge_policies::AssignmentsRef, ApplicationRegion, Region};
     extern crate test;
-    use itertools::Itertools;
+    //use itertools::Itertools;
     use test::Bencher;
 
     use super::Assignments;
