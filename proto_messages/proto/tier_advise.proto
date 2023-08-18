@@ -1,0 +1,12 @@
+syntax = "proto3";
+package skypie;
+
+import "run.proto";
+
+message TierAdvise {
+    map<uint64, Setting> replication_factor = 1;
+}
+
+message Setting {
+    map<string, Run> runs = 1;
+}

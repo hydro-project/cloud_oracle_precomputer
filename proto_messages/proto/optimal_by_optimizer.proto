@@ -1,0 +1,14 @@
+syntax = "proto3";
+package skypie;
+
+import "google/protobuf/wrappers.proto";
+import "decision.proto";
+
+message OptimalByOptimizer {
+    google.protobuf.StringValue optimizer_type = 1;
+    repeated Decision optimal_partitions = 2;
+    google.protobuf.Int64Value no_facets = 3;
+    google.protobuf.Int64Value partitioner_time_ns = 4;
+    google.protobuf.Int64Value partitioner_computation_time_ns = 5;
+    //google.protobuf.Int64Value no_redundant_facets = 6
+}
