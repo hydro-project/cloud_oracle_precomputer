@@ -7,7 +7,7 @@ use rand::Rng;
 use hydroflow::hydroflow_syntax;
 use hydroflow::util::cli::{ConnectedDemux, ConnectedDirect, ConnectedSink};
 use hydroflow::util::serialize_to_bytes;
-use skypie_lib::{influx_logger::{InfluxLogger, InfluxLoggerConfig}, skypie_lib::{output::OutputWrapper, iter_stream_batches::iter_stream_batches, noop_logger::NoopLogger}};
+use skypie_lib::{influx_logger::{InfluxLogger, InfluxLoggerConfig}, skypie_lib::{output::{OutputWrapper, OutputDecision}, iter_stream_batches::iter_stream_batches, noop_logger::NoopLogger}, Decision};
 use skypie_lib::skypie_lib::args::Args;
 use skypie_lib::skypie_lib::monitor::MonitorMovingAverage;
 use skypie_lib::{Loader, SkyPieLogEntry};
@@ -44,9 +44,15 @@ async fn main() {
     );
 
     // Write basic stats to file
-    let stats = OutputWrapper::new(loader.object_stores.clone(), vec![], vec![], args.replication_factor.clone() as u64);
+    let no_applications = loader.app_regions.len();
+    let read_choice = vec![Default::default(), no_applications];
+    let no_dimensions = Decision{write_choice: Default::default(), read_choice};
+    /* let stats = OutputWrapper::new(loader.object_stores.clone(), vec![], vec![], args.replication_factor.clone() as u64);
     let stats_file_name = format!("{}/stats.json", args.experiment_name);
-    stats.save_json(&stats_file_name);
+    stats.save_json(&stats_file_name); */
+    let stats_file_name = format!("{}/stats", args.experiment_name);
+    let stats = skypie_proto_messages::Wrapper::new(loader.object_stores.clone(), vec![], vec![], args.replication_factor.clone() as u64);
+    stats.save(&stats_file_name);
 
     // Get ports
     let output_send = ports

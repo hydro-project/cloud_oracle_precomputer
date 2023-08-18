@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use clap::Parser;
-use hydroflow::{util::cli::{ConnectedDirect, ConnectedSource}};
+use hydroflow::util::cli::{ConnectedDirect, ConnectedSource};
 
 use skypie_lib::{candidate_policies_reduce_hydroflow, Args, Loader, ApplicationRegion, influx_logger::{InfluxLogger, InfluxLoggerConfig}};
 
