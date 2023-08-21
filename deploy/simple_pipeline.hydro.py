@@ -18,7 +18,7 @@ async def main(args):
     args = [f"--{key}={value}" for key, value in args.items()]
 
     write_choices_service = deployment.HydroflowCrate(
-        src=".",
+        src="./skypie_lib",
         example="write_choices_simple_launch",
         on=localhost,
         display_id="write_choices",
@@ -26,7 +26,7 @@ async def main(args):
     )
     
     candidates_service = deployment.HydroflowCrate(
-        src=".",
+        src="./skypie_lib",
         #example="simple_candidate_policies_launch",
         example="candidate_policies_launch",
         on=localhost,
@@ -35,7 +35,7 @@ async def main(args):
     )
 
     receiver_service = deployment.HydroflowCrate(
-        src=".",
+        src="./skypie_lib",
         #example="redundancy_elim_test_launch",
         #example="decisions_counter_launch",
         example="decisions_counter_launch",

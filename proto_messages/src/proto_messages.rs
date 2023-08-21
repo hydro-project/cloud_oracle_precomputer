@@ -15,9 +15,11 @@ pub use messages::{Assignment, Scheme, Decision, OptimalByOptimizer, Run, TierAd
 impl Wrapper {
     pub fn new(
         object_stores: Vec<String>,
-        candidate_partitions: Vec<Decision>,
-        optimal_partitions: Vec<Decision>,
+        candidate_partitions: Vec<String>,
+        optimal_partitions: Vec<String>,
         replication_factor: u64,
+        no_app_regions: i64,
+        no_dimensions: i64,
     ) -> Self {
         let max_replication_factor = replication_factor;
         let min_replication_factor = replication_factor;
@@ -28,6 +30,8 @@ impl Wrapper {
             object_stores,
             candidate_partitions,
             optimal_partitions,
+            no_app_regions,
+            no_dimensions,
         );
 
         let tier_advise = Some(TierAdvise::new(replication_factor, run));
@@ -69,43 +73,14 @@ impl Run {
         max_replication_factor: u64,
         min_replication_factor: u64,
         object_stores: Vec<String>,
-        candidate_partitions: Vec<Decision>,
-        optimal_partitions: Vec<Decision>,
+        candidate_partitions: Vec<String>,
+        optimal_partitions: Vec<String>,
+        no_app_regions: i64,
+        no_dimensions: i64,
     ) -> Run {
-        let no_app_regions = if candidate_partitions.len() > 0 {
-            candidate_partitions
-                .first()
-                .unwrap()
-                .replication_scheme
-                .as_ref()
-                .unwrap()
-                .app_assignments
-                .len() as i64
-        } else if optimal_partitions.len() > 0 {
-            optimal_partitions
-                .first()
-                .unwrap()
-                .replication_scheme
-                .as_ref()
-                .unwrap()
-                .app_assignments
-                .len() as i64
-        } else {
-            0
-        };
+
         let no_app_regions = Some(no_app_regions);
     
-        let no_dimensions = if candidate_partitions.len() > 0 {
-            candidate_partitions
-                .first()
-                .unwrap()
-                .cost_wl_halfplane
-                .len() as i64
-        } else if optimal_partitions.len() > 0 {
-            optimal_partitions.first().unwrap().cost_wl_halfplane.len() as i64
-        } else {
-            0
-        };
         let no_dimensions = Some(no_dimensions);
     
         let no_object_stores = Some(object_stores.len() as i64);
@@ -137,7 +112,7 @@ impl Run {
 }
 
 impl OptimalByOptimizer {
-    pub fn new(optimal_partitions: Vec<Decision>) -> OptimalByOptimizer {
+    pub fn new(optimal_partitions: Vec<String>) -> OptimalByOptimizer {
         let partitioner_time_ns = Some(0);
         let partitioner_computation_time_ns = Some(0);
     

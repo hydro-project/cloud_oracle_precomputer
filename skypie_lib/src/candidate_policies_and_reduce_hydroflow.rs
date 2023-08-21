@@ -1,20 +1,21 @@
-use std::{sync::atomic::{compiler_fence, Ordering::SeqCst}, collections::HashMap};
+use std::{sync::atomic::{compiler_fence, Ordering::SeqCst}, collections::HashMap, path::Path};
 
-use hydroflow::{hydroflow_syntax, tokio_stream::Stream, bytes::{BytesMut, Bytes}, util::deserialize_from_bytes, futures::Sink, serde_json};
+use hydroflow::{hydroflow_syntax, tokio_stream::Stream, bytes::{BytesMut, Bytes}, util::deserialize_from_bytes, futures::Sink /* , serde_json */};
 use itertools::Itertools;
 use pyo3::{Python, PyAny, Py, types::PyModule};
+use skypie_proto_messages::ProtobufFileSink;
 
 use crate::{
     write_choice::WriteChoice,
     opt_assignments::opt_assignments,
     decision::Decision,
     object_store::ObjectStore,
-    output::OutputDecision,
+    //output::OutputDecision,
     reduce_oracle_hydroflow::BatcherMap,
     identifier::Identifier,
     monitor::{MonitorNOOP, MonitorMovingAverage},
     merge_policies::MergeIterator,
-    ApplicationRegion, influx_logger::{InfluxLogger, InfluxLoggerConfig},
+    ApplicationRegion, influx_logger::{InfluxLogger, /* InfluxLoggerConfig */},
     SkyPieLogEntry
 };
 
@@ -25,7 +26,7 @@ pub type OutputType = Decision;
 pub type InputConnection = std::pin::Pin<Box<dyn Stream<Item = Result<BytesMut, std::io::Error>> + Send + Sync>>;
 pub type OutputConnection = std::pin::Pin<Box<dyn Sink<Bytes, Error = std::io::Error> + Send + Sync>>;
 
-pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<ApplicationRegion>, input: InputConnection, batch_size: usize, experiment_name: String, output_candidates_file_name: String, output_file_name: String, logger: InfluxLogger, object_store_id_map: HashMap<u16, ObjectStore>) -> hydroflow::scheduled::graph::Hydroflow
+pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<ApplicationRegion>, input: InputConnection, batch_size: usize, _experiment_name: String, output_candidates_file_name: String, output_file_name: String, logger: InfluxLogger, object_store_id_map: HashMap<u16, ObjectStore>) -> hydroflow::scheduled::graph::Hydroflow
 {
     {
         // Validate application regions
@@ -74,6 +75,9 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
     let batch_logging_frequency = Some(1);
     let mut reduce_output_monitor =  MonitorMovingAverage::new(1000); // MonitorNOOP::new(0);
     let optimal_log_interval = Some(1000);
+
+    let candidate_proto_sink = ProtobufFileSink::new(Path::new(&output_candidates_file_name), 1*1024*1024, 1024).unwrap();
+    let optimal_proto_sink = ProtobufFileSink::new(Path::new(&output_file_name), 1*1024*1024, 1024).unwrap();
 
     let flow = hydroflow_syntax! {
         source_in = source_stream(input) -> map(|x| -> Vec<u16> {deserialize_from_bytes(x.unwrap()).unwrap()})
@@ -197,10 +201,11 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
         // Output candidates
         
         candidates
-        -> map(|d: Decision| -> OutputDecision {d.into()})
-        //-> map(|d: DecisionRef| -> OutputDecision {d.into()})
+        -> map(|d: Decision| -> skypie_proto_messages::Decision {d.into()})
+        -> dest_sink(candidate_proto_sink);
+        /* -> map(|d: Decision| -> OutputDecision {d.into()})
         -> map(|d|serde_json::to_string(&d).unwrap())
-        -> dest_file(output_candidates_file_name, false);
+        -> dest_file(output_candidates_file_name, false); */
        
 
          // Measure candidate cycle time here
@@ -288,10 +293,12 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
 
         //-> flatten();
 
-        optimal -> flatten() -> map(|d: Decision| -> OutputDecision {d.into()})
-        //-> map(|d: DecisionRef| -> OutputDecision {d.into()})
+        optimal -> flatten()
+        -> map(|d: Decision| -> skypie_proto_messages::Decision {d.into()})
+        -> dest_sink(optimal_proto_sink);
+        /* -> map(|d: Decision| -> OutputDecision {d.into()})
         -> map(|d|serde_json::to_string(&d).unwrap())
-        -> dest_file(output_file_name, false);
+        -> dest_file(output_file_name, false); */
 
         //-> py_run(args.code, args.module, args.function)
         //optimal_tee = optimal -> tee();

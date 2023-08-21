@@ -1,7 +1,7 @@
 use hydroflow::util::cli::{ConnectedDirect, ConnectedSource};
 use hydroflow::util::deserialize_from_bytes;
 use hydroflow::hydroflow_syntax;
-use skypie_lib::skypie_lib::monitor::MonitorMovingAverage;
+use skypie_lib::monitor::MonitorMovingAverage;
 
 #[hydroflow::main]
 async fn main() {
@@ -16,7 +16,7 @@ async fn main() {
 
     let mut output_monitor = MonitorMovingAverage::new(1000);
 
-    type Input = skypie_lib::skypie_lib::candidate_policies_hydroflow::OutputType;
+    type Input = skypie_lib::candidate_policies_hydroflow::OutputType;
 
     let flow = hydroflow_syntax! {
 

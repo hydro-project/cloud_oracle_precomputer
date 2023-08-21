@@ -18,7 +18,7 @@ async def main(args):
     args = [f"--{key}={value}" for key, value in args.items()]
 
     generator_service = deployment.HydroflowCrate(
-        src=".",
+        src="./skypie_lib",
         example="decisions_generator_launch",
         on=localhost,
         display_id="generator",
@@ -26,7 +26,7 @@ async def main(args):
     )
 
     receiver_service = deployment.HydroflowCrate(
-        src=".",
+        src="./skypie_lib",
         example="redundancy_elim_test_launch",
         on=localhost,
         display_id="redundancy_elim",

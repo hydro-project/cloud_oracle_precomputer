@@ -2,7 +2,6 @@ syntax = "proto3";
 package skypie;
 
 import "google/protobuf/wrappers.proto";
-import "decision.proto";
 import "optimal_by_optimizer.proto";
 
 message Run {
@@ -22,16 +21,6 @@ message Run {
     //google.protobuf.Int64Value no_vertices = 14;
     google.protobuf.Int64Value partitioner_time_ns = 15;
     repeated string object_stores_considered = 16;
-    repeated Decision candidate_partitions = 17;
+    repeated google.protobuf.StringValue candidate_partitions = 17;
     map<string, OptimalByOptimizer> optimal_partitions_by_optimizer = 18;
-}
-
-message OutputDecision {
-    google.protobuf.UInt64Value replication_factor = 1;
-    repeated string object_stores = 2;
-}
-
-message OutputOptimalByOptimizer {
-    google.protobuf.UInt64Value replication_factor = 1;
-    repeated string object_stores = 2;
 }

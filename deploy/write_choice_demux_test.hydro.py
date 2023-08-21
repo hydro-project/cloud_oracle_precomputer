@@ -21,7 +21,7 @@ async def main(args):
     args = [f"--{key}={value}" for key, value in args.items()]
 
     generator_service = deployment.HydroflowCrate(
-        src=".",
+        src="./skypie_lib",
         example="write_choices_simple_demux_launch",
         on=localhost,
         display_id="generator",
@@ -36,7 +36,7 @@ async def main(args):
                 **kwargs
             )
 
-    receiver_service = [s for s in create_scale_out_service(src=".",
+    receiver_service = [s for s in create_scale_out_service(src="./skypie_lib",
         num_scale_out=redundancy_elimination_workers,
         example="counter",
         on=localhost,
@@ -45,7 +45,7 @@ async def main(args):
         )]
 
     """ deployment.HydroflowCrate(
-        src=".",
+        src="./skypie_lib",
         example="counter",
         on=localhost,
         display_id="counter",

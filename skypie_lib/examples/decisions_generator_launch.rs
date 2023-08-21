@@ -7,14 +7,14 @@ use hydroflow::util::cli::{ConnectedDirect, ConnectedSink};
 use hydroflow::util::{serialize_to_bytes};
 use hydroflow::hydroflow_syntax;
 use itertools::Itertools;
-use skypie_lib::skypie_lib::iter_stream_batches::iter_stream_batches;
-use skypie_lib::skypie_lib::network_record::NetworkCostMap;
-use skypie_lib::skypie_lib::read_choice::ReadChoice;
+use skypie_lib::iter_stream_batches::iter_stream_batches;
+use skypie_lib::network_record::NetworkCostMap;
+use skypie_lib::read_choice::ReadChoice;
 use skypie_lib::{ApplicationRegion, Decision, Region, WriteChoice, Args};
 //use skypie_lib::Loader;
 //use skypie_lib::skypie_lib::args::Args;
-use skypie_lib::skypie_lib::monitor::MonitorMovingAverage;
-use skypie_lib::skypie_lib::object_store::{ObjectStore, Cost};
+use skypie_lib::monitor::MonitorMovingAverage;
+use skypie_lib::object_store::{ObjectStore, Cost, ObjectStoreStruct};
 
 fn create_dummy_decisions(num_decisions: u16) -> Vec<Decision> {
     let regions = vec![Region{id:0, name: "0".to_string()} ,Region{id: 0, name: "1".to_string()}];
@@ -29,13 +29,13 @@ fn create_dummy_decisions(num_decisions: u16) -> Vec<Decision> {
 
         let app_regions = regions.iter().map(|r|{ApplicationRegion{region: r.clone(), egress_cost: egress_cost.clone(), ingress_cost: ingress_cost.clone()}}).collect_vec();
         
-        let o0 = ObjectStore{id: 0, name: "0".to_string(), region: regions[0].clone(), cost: Cost { size_cost: 1.0, put_cost: 2.0, put_transfer: 4.0, get_cost: 3.0, get_transfer: 5.0, egress_cost: HashMap::default(), ingress_cost: HashMap::default() }};
+        let o0 = ObjectStore::new(ObjectStoreStruct{id: 0, name: "0".to_string(), region: regions[0].clone(), cost: Cost { size_cost: 1.0, put_cost: 2.0, put_transfer: 4.0, get_cost: 3.0, get_transfer: 5.0, egress_cost: HashMap::default(), ingress_cost: HashMap::default() }});
 
         let mut object_stores: Vec<ObjectStore> = (1..num_decisions).into_iter().map(|i|{
             let mut cost = o0.cost.clone();
             cost.size_cost = cost.size_cost + i as f64;
 
-            ObjectStore{id: i, name: i.to_string(), region: regions[0].clone(), cost: cost}
+            ObjectStore::new(ObjectStoreStruct{id: i, name: i.to_string(), region: regions[0].clone(), cost: cost})
         }).collect_vec();
 
         for  o in object_stores.iter_mut() {
@@ -74,7 +74,7 @@ async fn main() {
 
     let mut output_monitor = MonitorMovingAverage::new(1000);
 
-    type Output = skypie_lib::skypie_lib::candidate_policies_hydroflow::OutputType;
+    type Output = skypie_lib::candidate_policies_hydroflow::OutputType;
 
     let iter_batch_size = 10;
     let combo_batches_stream = iter_stream_batches(create_dummy_decisions(num_dummy_decisions as u16).into_iter().cycle().take(num_decisions), iter_batch_size);

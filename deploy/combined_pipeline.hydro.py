@@ -66,10 +66,12 @@ async def main(args):
     # Create directory for experiment
     os.mkdir(experiment_name)
 
+    profile = "dev"
+
     print(args)
     if args[0] == "local":
-        redundancy_elimination_workers = 8
-        replication_factor = 3
+        redundancy_elimination_workers = 1
+        replication_factor = 2
 
         args = {
             "region-selector": "aws",
@@ -104,24 +106,33 @@ async def main(args):
     args = [f"--{key}={value}" for key, value in args.items()]
 
     # Worker specific args
+    optimal_policies_name_prefix = "optimal"
+    optimal_policies_file_extension = "jsonl"
+
     kwargs_instances={
-        i: {"args":(args + ['--executor-name', f"candidate_executor_{i}", '-o', f'{experiment_name}/optimal_{i}.jsonl', "--output-candidates-file-name", f"{experiment_name}/candidates_{i}.jsonl"])} for i in range(redundancy_elimination_workers)
+        i: {"args":(
+            args + [
+                '--executor-name', f"candidate_executor_{i}",
+                '-o', f'{experiment_name}/{optimal_policies_name_prefix}_{i}.{optimal_policies_file_extension}',
+                "--output-candidates-file-name", f"{experiment_name}/candidates_{i}.jsonl"]
+            )
+        } for i in range(redundancy_elimination_workers)
     }
 
     write_choices_service = deployment.HydroflowCrate(
-        src=".",
-        #profile="dev",
+        src="./skypie_lib",
+        profile=profile,
         #example="write_choices_simple_launch",
         example="write_choices_simple_demux_launch",
         on=localhost,
         display_id="write_choices",
-        args=args
+        args=args + ['-o', f"{optimal_policies_name_prefix}.{optimal_policies_file_extension}"]
     )
     
     candidates_service = [s for s in create_scale_up_service(deployment,
         num_scale_up=redundancy_elimination_workers,
-        #profile="dev",
-        src=".",
+        profile=profile,
+        src="./skypie_lib",
         example="candidate_and_reduce_launch",
         #example="counter",
         on=localhost,

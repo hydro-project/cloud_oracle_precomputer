@@ -1,4 +1,4 @@
-use std::{sync::atomic::{compiler_fence, Ordering::SeqCst}};
+use std::sync::atomic::{compiler_fence, Ordering::SeqCst};
 
 use clap::Parser;
 use itertools::Itertools;
@@ -7,9 +7,16 @@ use rand::Rng;
 use hydroflow::hydroflow_syntax;
 use hydroflow::util::cli::{ConnectedDemux, ConnectedDirect, ConnectedSink};
 use hydroflow::util::serialize_to_bytes;
-use skypie_lib::{influx_logger::{InfluxLogger, InfluxLoggerConfig}, skypie_lib::{output::{OutputWrapper, OutputDecision}, iter_stream_batches::iter_stream_batches, noop_logger::NoopLogger}, Decision};
-use skypie_lib::skypie_lib::args::Args;
-use skypie_lib::skypie_lib::monitor::MonitorMovingAverage;
+use skypie_lib::args::Args;
+use skypie_lib::monitor::MonitorMovingAverage;
+use skypie_lib::{
+    influx_logger::{InfluxLogger, InfluxLoggerConfig},
+    iter_stream_batches::iter_stream_batches,
+    noop_logger::NoopLogger,
+    output::{OutputDecision, OutputWrapper},
+    read_choice::ReadChoice,
+    ApplicationRegion, Decision,
+};
 use skypie_lib::{Loader, SkyPieLogEntry};
 
 struct IterWrapper {
@@ -18,7 +25,9 @@ struct IterWrapper {
 
 impl IterWrapper {
     pub fn new(object_stores: Vec<u16>, n: usize) -> IterWrapper {
-        IterWrapper { iter: object_stores.into_iter().combinations(n) }
+        IterWrapper {
+            iter: object_stores.into_iter().combinations(n),
+        }
     }
 }
 
@@ -44,14 +53,38 @@ async fn main() {
     );
 
     // Write basic stats to file
-    let no_applications = loader.app_regions.len();
-    let read_choice = vec![Default::default(), no_applications];
-    let no_dimensions = Decision{write_choice: Default::default(), read_choice};
-    /* let stats = OutputWrapper::new(loader.object_stores.clone(), vec![], vec![], args.replication_factor.clone() as u64);
-    let stats_file_name = format!("{}/stats.json", args.experiment_name);
-    stats.save_json(&stats_file_name); */
+    let no_app_regions = loader.app_regions.len();
+    let read_choice: ReadChoice = ReadChoice::new(no_app_regions);
+    let no_app_regions = no_app_regions as i64;
+    // Number of dimensions is the number of workload parameters/cost coefficients + 1 for the intercept
+    let no_dimensions = Decision {
+        write_choice: Default::default(),
+        read_choice,
+    }.get_halfplane_ineq().len() as i64;
+
+    let optimal_partitions: Vec<String> = if let Some(output_file_name) = args.output_file_name {
+        let file_extension = output_file_name.extension().unwrap().to_str().unwrap();
+        let file_name = output_file_name.file_stem().unwrap().to_str().unwrap();
+        (0..args.redundancy_elimination_workers)
+            .map(|i| format!("{}_{}.{}", file_name, i, file_extension))
+            .collect_vec()
+    } else {
+        vec![]
+    };
+
     let stats_file_name = format!("{}/stats", args.experiment_name);
-    let stats = skypie_proto_messages::Wrapper::new(loader.object_stores.clone(), vec![], vec![], args.replication_factor.clone() as u64);
+    let stats = skypie_proto_messages::Wrapper::new(
+        loader
+            .object_stores
+            .iter()
+            .map(|o| format!("{}-{}", o.region.name, o.name))
+            .collect_vec(),
+        vec![],
+        optimal_partitions,
+        args.replication_factor.clone() as u64,
+        no_app_regions,
+        no_dimensions
+    );
     stats.save(&stats_file_name);
 
     // Get ports

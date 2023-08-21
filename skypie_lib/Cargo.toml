@@ -1,0 +1,40 @@
+[package]
+name = "sky-pie-precomputer"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = { version = "4.0.29", features = [ "derive" ] }
+hydroflow = { git = "https://github.com/hydro-project/hydroflow", features = [ "cli_integration", "python"]}
+serde = { version = "1", features = [ "derive" ] }
+chrono = { version = "0.4.20", features = [ "serde" ], default-features = true }
+csv = "1.1"
+itertools = "0.10.5"
+regex = "1.5.4"
+tokio = { version = "1", features = ["full"] }
+#hydroflow_cli_integration = "0.1.1"
+pyo3 = { version = "^0.18", features = ["auto-initialize"] }
+numpy = "^0.18"
+#widestring = "1.0.2"
+which = "4.4.0"
+lazy_static = "1.4.0"
+influxdb = { version = "0.7.0", features = ["derive"] }
+#influxdb = { version = "0.7.0", default-features = false,features = ["derive", "use-serde", "reqwest-client"] }
+rand = "0.8.5"
+sky-pie-precomputer-proto-messages = {path = "../proto_messages"}
+
+#[dependencies.pyo3]
+#version = "0.18.3"
+#features = ["auto-initialize"]
+
+#[dev-dependencies]
+#criterion = "0.3"
+
+[lib]
+name = "skypie_lib"
+path = "src/skypie_lib.rs"
+
+#[[example]]
+#name = "candidate_policies_launch"

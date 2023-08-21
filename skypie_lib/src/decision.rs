@@ -131,6 +131,19 @@ impl Iterator for DecisionCostIter<'_> {
 }
 
 impl Decision {
+    pub fn get_halfplane_ineq(&self) -> Vec<f64> {
+        let mut cost_wl_halfplane: Vec::<f64> = Vec::with_capacity(2 + self.cost_iter().len());
+        
+        // Intercept
+        cost_wl_halfplane.push(0.0);
+        // Coefficients for cost per workload feature of decision converted to negative
+        cost_wl_halfplane.extend(self.cost_iter().map(|c| c * 1.0));
+        // Coefficient of inequality, i.e., cost
+        cost_wl_halfplane.push(-1.0);
+
+        return cost_wl_halfplane;
+    }
+
     pub fn to_inequalities_numpy(decisions: &Vec<Decision>) -> Py<PyArray<f64, Dim<[usize; 2]>>> {
         let dim = 2 + decisions.first().unwrap().cost_iter().len();
         let num = decisions.len();
@@ -139,13 +152,7 @@ impl Decision {
         // allocate 1-d vector for inequalities
         let mut ineqs: Vec<f64> = Vec::with_capacity(num * dim);
         for decision in decisions {
-            // Intercept
-            ineqs.push(0.0);
-            // Coefficients for cost per workload feature of decision converted to negative
-            //ineqs.extend(decision.cost_iter().map(|c| c * -1.0));
-            ineqs.extend(decision.cost_iter().map(|c| c * 1.0));
-            // Coefficient of inequality, i.e., cost
-            ineqs.push(-1.0);
+            ineqs.extend(decision.get_halfplane_ineq());
         }
 
         debug_assert_eq!(ineqs.len(), num * dim);
@@ -171,19 +178,21 @@ impl From<Decision> for OutputDecision {
         // Convert into seconds since UNIX epoch
         let now_secs = now.duration_since(UNIX_EPOCH).unwrap().as_secs();
 
-        let mut cost_wl_halfplane: Vec::<f64> = Vec::with_capacity(2 + decision_ref.cost_iter().len());
-        
-        cost_wl_halfplane.push(0.0);
-        // Coefficients for cost per workload feature of decision converted to negative
-        //ineqs.extend(decision.cost_iter().map(|c| c * -1.0));
-        cost_wl_halfplane.extend(decision_ref.cost_iter().map(|c| c * 1.0));
-        // Coefficient of inequality, i.e., cost
-        cost_wl_halfplane.push(-1.0);
-        
+        let cost_wl_halfplane: Vec::<f64> = decision_ref.get_halfplane_ineq();        
         let replication_scheme: OutputScheme = decision_ref.into();
         
-        //let cost_wl_halfplane = ;
         OutputDecision { replication_scheme, cost_wl_halfplane, timestamp: now_secs }
+    }
+}
+
+impl From<Decision> for skypie_proto_messages::Decision {
+    fn from(decision: Decision) -> Self {
+        // Get timestamp of current time of day
+        let now = SystemTime::now();
+
+        let cost_wl_halfplane: Vec::<f64> = decision.get_halfplane_ineq();
+        let replication_scheme = Some(decision.into());
+        skypie_proto_messages::Decision{ replication_scheme, cost_wl_halfplane, timestamp: Some(now.into())}
     }
 }
 
@@ -192,6 +201,17 @@ impl From<Decision> for OutputScheme {
         let object_stores = decision.write_choice.object_stores.into_iter().map(|o| format!("{}-{}", o.region.name, o.name)).collect_vec();
         let app_assignments = decision.read_choice.iter().map(|(region, object_store)| OutputAssignment{app: region.region.name.clone(), object_store: format!("{}-{}", object_store.region.name, object_store.name)}).collect_vec();
         OutputScheme{object_stores, app_assignments}
+    }
+}
+
+impl From<Decision> for skypie_proto_messages::Scheme {
+    
+    fn from(decision: Decision) -> Self {
+        use skypie_proto_messages::Assignment;
+
+        let object_stores = decision.write_choice.object_stores.into_iter().map(|o| format!("{}-{}", o.region.name, o.name)).collect_vec();
+        let app_assignments = decision.read_choice.iter().map(|(region, object_store)| Assignment{app: region.region.name.clone(), object_store: format!("{}-{}", object_store.region.name, object_store.name)}).collect_vec();
+        Self { object_stores, app_assignments}
     }
 }
 
