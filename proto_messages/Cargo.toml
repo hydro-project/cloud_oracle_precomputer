@@ -5,6 +5,9 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+# "cdylib" is necessary to produce a shared library for Python to import from.
+crate-type = ["cdylib"]
+
 [dependencies]
 hydroflow = { git = "https://github.com/hydro-project/hydroflow", features = [ "cli_integration", "python"]}
 tokio = { version = "1", features = ["full"] }
@@ -12,6 +15,7 @@ bytes = "^1"
 prost = "0.11.9"
 # Only necessary if using Protobuf well-known types:
 prost-types = "0.11.9"
+pyo3 = { version = "^0.18", features = ["abi3-py37"] }
 
 [build-dependencies]
 prost-build = { version = "0.11.9" }
@@ -19,3 +23,7 @@ prost-build = { version = "0.11.9" }
 [lib]
 name = "skypie_proto_messages"
 path = "src/proto_messages.rs"
+
+[features]
+python-module = ["pyo3/extension-module"]
+default = []

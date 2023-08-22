@@ -51,7 +51,7 @@ impl Cost {
     */
     pub fn get_egress_cost(&self, region: &ApplicationRegion, _object_store_region: &Region) -> f64 {
 
-        *self.egress_cost.get(&region.region).unwrap()
+        *self.egress_cost.get(&region.region).expect(&format!("Egress cost not found for region: {:?}", &region.region))
     }
 
     /*

@@ -2,7 +2,7 @@ use itertools::Itertools;
 use clap::Parser;
 
 use hydroflow::util::cli::{ConnectedDirect, ConnectedSink};
-use hydroflow::util::{serialize_to_bytes};
+use hydroflow::util::serialize_to_bytes;
 use hydroflow::hydroflow_syntax;
 use skypie_lib::Loader;
 use skypie_lib::skypie_lib::args::Args;

@@ -60,9 +60,18 @@ async fn main() {
     let no_dimensions = Decision {
         write_choice: Default::default(),
         read_choice,
-    }.get_halfplane_ineq().len() as i64;
+    }.plane_iter().len() as i64;
 
     let optimal_partitions: Vec<String> = if let Some(output_file_name) = args.output_file_name {
+        let file_extension = output_file_name.extension().unwrap().to_str().unwrap();
+        let file_name = output_file_name.file_stem().unwrap().to_str().unwrap();
+        (0..args.redundancy_elimination_workers)
+            .map(|i| format!("{}_{}.{}", file_name, i, file_extension))
+            .collect_vec()
+    } else {
+        vec![]
+    };
+    let candidate_partitions: Vec<String> = if let Some(output_file_name) = args.output_candidates_file_name {
         let file_extension = output_file_name.extension().unwrap().to_str().unwrap();
         let file_name = output_file_name.file_stem().unwrap().to_str().unwrap();
         (0..args.redundancy_elimination_workers)
@@ -79,7 +88,7 @@ async fn main() {
             .iter()
             .map(|o| format!("{}-{}", o.region.name, o.name))
             .collect_vec(),
-        vec![],
+        candidate_partitions,
         optimal_partitions,
         args.replication_factor.clone() as u64,
         no_app_regions,

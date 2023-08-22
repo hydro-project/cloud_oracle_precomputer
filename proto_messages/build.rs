@@ -1,6 +1,11 @@
 use std::io::Result;
 fn main() -> Result<()> {
-    prost_build::compile_protos(&[
+    let mut compiler = prost_build::Config::new();
+    
+    #[cfg(feature = "python-module")]
+    compiler.message_attribute(".", "#[pyclass(set_all, get_all)]");
+
+    compiler.compile_protos(&[
         "./proto/run.proto",
         "./proto/decision.proto",
         "./proto/assignment.proto",

@@ -24,7 +24,11 @@ pub struct Decision {
 
 impl Decision {
     pub fn cost_iter<'a>(&'a self) -> DecisionCostIter<'a> {
-        DecisionCostIter::new(self)
+        DecisionCostIter::new(self, false)
+    }
+    
+    pub fn plane_iter<'a>(&'a self) -> DecisionCostIter<'a> {
+        DecisionCostIter::new(self, true)
     }
 }
 
@@ -35,10 +39,11 @@ pub struct DecisionCostIter<'a> {
     egress_iter: ReadChoiceIter::<'a>, //hash_map::Iter<'a, ApplicationRegion, ObjectStore>,
     num_apps: usize,
     pos: usize,
+    as_halfplane: bool,
 }
 
 impl<'a> DecisionCostIter<'a> {
-    pub fn new(decision: &'a Decision) -> DecisionCostIter<'a> {
+    pub fn new(decision: &'a Decision, as_halfplane: bool) -> DecisionCostIter<'a> {
         let num_apps = decision.read_choice.len();
         let assignments = decision.read_choice.iter(); //: hash_map::Iter<'_, ApplicationRegion, ObjectStore> = decision.read_choice.iter();
         DecisionCostIter {
@@ -48,12 +53,18 @@ impl<'a> DecisionCostIter<'a> {
             egress_iter: assignments.clone(),
             num_apps,
             pos: 0,
+            as_halfplane
         }
     }
 
     pub fn len(&self) -> usize {
         /* storage, put, get..., ingress..., egress... */
-        1 + 1 + self.num_apps + self.num_apps + self.num_apps
+        let mut len = 1 + 1 + self.num_apps + self.num_apps + self.num_apps;
+        if self.as_halfplane {
+            len += 2;
+        }
+
+        return len;
     }
 }
 
@@ -73,15 +84,26 @@ impl Iterator for DecisionCostIter<'_> {
 
         let num_apps = self.num_apps;
 
-        let get_start = 2;
-        let get_end = 2 + num_apps;
+        let intercept_start = 0;
+        let intercept_end = intercept_start + if self.as_halfplane { 1 } else { 0 };
+        let storage_start = intercept_end;
+        let storage_end = storage_start + 1;
+        let put_start = storage_end;
+        let put_end = put_start + 1;
+        let get_start = put_end;
+        let get_end = get_start + num_apps;
         let ingress_start = get_end;
         let ingress_end = ingress_start + num_apps;
         let egress_start = ingress_end;
         let egress_end = egress_start + num_apps;
+        let cost_coef_start = egress_end;
+        let cost_coef_end = cost_coef_start + if self.as_halfplane { 1 } else { 0 };
 
         let pos = self.pos;
-        let res = if pos == 0 {
+        let res = if pos >= intercept_start && pos < intercept_end{
+            // Assuming absent intercept, i.e., 0.0
+            Some(0.0)
+        } else if pos >= storage_start && pos < storage_end {
             // Storage: sum of object stores' storage costs
             let cost = self
                 .decision
@@ -90,7 +112,7 @@ impl Iterator for DecisionCostIter<'_> {
                 .iter()
                 .fold(0.0, |acc, x: &ObjectStore| acc + x.cost.size_cost);
             Some(cost)
-        } else if pos == 1 {
+        } else if pos >= put_start && pos < put_end {
             // Put: sum of object stores' put costs
             let cost = self
                 .decision
@@ -120,7 +142,11 @@ impl Iterator for DecisionCostIter<'_> {
                 &self.egress_iter.next().unwrap();
             let cost = object_store.get_egress_cost(&app_region);
             Some(cost)
+        } else if pos >= cost_coef_start && pos < cost_coef_end {
+            // Additional coefficient for cost to form the halfplane
+            Some(-1.0)
         } else {
+            debug_assert_eq!(pos, self.len());
             None
         };
 
@@ -132,27 +158,21 @@ impl Iterator for DecisionCostIter<'_> {
 
 impl Decision {
     pub fn get_halfplane_ineq(&self) -> Vec<f64> {
-        let mut cost_wl_halfplane: Vec::<f64> = Vec::with_capacity(2 + self.cost_iter().len());
-        
-        // Intercept
-        cost_wl_halfplane.push(0.0);
-        // Coefficients for cost per workload feature of decision converted to negative
-        cost_wl_halfplane.extend(self.cost_iter().map(|c| c * 1.0));
-        // Coefficient of inequality, i.e., cost
-        cost_wl_halfplane.push(-1.0);
-
+        let plane_iter = self.plane_iter();
+        let mut cost_wl_halfplane: Vec::<f64> = Vec::with_capacity(plane_iter.len());
+        cost_wl_halfplane.extend(plane_iter);
         return cost_wl_halfplane;
     }
 
     pub fn to_inequalities_numpy(decisions: &Vec<Decision>) -> Py<PyArray<f64, Dim<[usize; 2]>>> {
-        let dim = 2 + decisions.first().unwrap().cost_iter().len();
+        let dim = decisions.first().unwrap().plane_iter().len();
         let num = decisions.len();
         let dims = [num, dim];
 
         // allocate 1-d vector for inequalities
         let mut ineqs: Vec<f64> = Vec::with_capacity(num * dim);
         for decision in decisions {
-            ineqs.extend(decision.get_halfplane_ineq());
+            ineqs.extend(decision.plane_iter());
         }
 
         debug_assert_eq!(ineqs.len(), num * dim);
@@ -188,11 +208,14 @@ impl From<Decision> for OutputDecision {
 impl From<Decision> for skypie_proto_messages::Decision {
     fn from(decision: Decision) -> Self {
         // Get timestamp of current time of day
-        let now = SystemTime::now();
+        
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+        let now_secs = now.as_secs();
+        let now_subsec_nanos = now.subsec_nanos() as u64;
 
         let cost_wl_halfplane: Vec::<f64> = decision.get_halfplane_ineq();
         let replication_scheme = Some(decision.into());
-        skypie_proto_messages::Decision{ replication_scheme, cost_wl_halfplane, timestamp: Some(now.into())}
+        skypie_proto_messages::Decision{ replication_scheme, cost_wl_halfplane, timestamp: Some(now_secs), timestamp_subsec_nanos: Some(now_subsec_nanos)}
     }
 }
 
