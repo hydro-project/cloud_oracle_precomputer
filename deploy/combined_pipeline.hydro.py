@@ -107,14 +107,15 @@ async def main(args):
 
     # Worker specific args
     optimal_policies_name_prefix = "optimal"
-    optimal_policies_file_extension = "jsonl"
+    candidate_policies_name_prefix = "candidates"
+    output_file_extension = "proto.bin"
 
     kwargs_instances={
         i: {"args":(
             args + [
                 '--executor-name', f"candidate_executor_{i}",
-                '-o', f'{experiment_name}/{optimal_policies_name_prefix}_{i}.{optimal_policies_file_extension}',
-                "--output-candidates-file-name", f"{experiment_name}/candidates_{i}.jsonl"]
+                '-o', f'{experiment_name}/{optimal_policies_name_prefix}_{i}.{output_file_extension}',
+                "--output-candidates-file-name", f"{experiment_name}/{candidate_policies_name_prefix}_{i}.{output_file_extension}"]
             )
         } for i in range(redundancy_elimination_workers)
     }
@@ -126,7 +127,10 @@ async def main(args):
         example="write_choices_simple_demux_launch",
         on=localhost,
         display_id="write_choices",
-        args=args + ['-o', f"{optimal_policies_name_prefix}.{optimal_policies_file_extension}"]
+        args=args + [
+            '-o', f"{optimal_policies_name_prefix}.{output_file_extension}",
+            "--output-candidates-file-name", f"{experiment_name}/{candidate_policies_name_prefix}.{output_file_extension}"
+        ]
     )
     
     candidates_service = [s for s in create_scale_up_service(deployment,
