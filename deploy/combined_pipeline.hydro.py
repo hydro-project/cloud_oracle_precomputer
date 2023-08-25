@@ -56,51 +56,36 @@ def send_to_demux(src_service, dest_services):
 
 async def main(args):
 
-    deployment = hydro.Deployment()
-
-    localhost = deployment.Localhost()
-
+    #profile = "dev"
+    profile = "release" # Use default profile
+    base_dir = "/home/vscode/sky-pie-precomputer"
+    replication_factor = 3
+    region_selector = "aws|azure"
+    batch_size = 200
+    redundancy_elimination_workers = 1
     now = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    experiment_name = f"experiment-{now}"
-
-    # Create directory for experiment
-    os.mkdir(experiment_name)
-
-    profile = "dev"
-
+    experiment_name = f"experiments/experiment-{now}"
+    
     print(args)
-    if args[0] == "local":
+    if len(args) > 0 and args[0] == "local":
         redundancy_elimination_workers = 1
-        replication_factor = 2
-
-        args = {
-            "region-selector": "aws",
-            "replication-factor": replication_factor,
-            #"output-file-name": "/dev/null",
-            "batch-size": "200",
-            "network-file": "/Users/tbang/git/sky-pie-precomputer/network_cost_v2.csv",
-            "object-store-file": "/Users/tbang/git/sky-pie-precomputer/storage_pricing.csv",
-            "redundancy-elimination-workers": redundancy_elimination_workers,
-            #"output_candidates": ""
-            "experiment-name": experiment_name,
-            "influx-host": "flaminio.millennium.berkeley.edu"
-        }
+        #replication_factor = 3
     else:
         redundancy_elimination_workers = 200
-        replication_factor = 5
+        #replication_factor = 5
 
-        args = {
-            "region-selector": "aws|azure",
-            "replication-factor": replication_factor,
-            #"output-file-name": "/dev/null",
-            "batch-size": "200",
-            "network-file": "/home/tbang/sky-pie-precomputer/network_cost_v2.csv",
-            "object-store-file": "/home/tbang/sky-pie-precomputer/storage_pricing.csv",
-            "redundancy-elimination-workers": redundancy_elimination_workers,
-            #"output_candidates": ""
-            "experiment-name": experiment_name,
-            "influx-host": "flaminio.millennium.berkeley.edu",
-        }
+    args = {
+        "region-selector": region_selector,
+        "replication-factor": replication_factor,
+        #"output-file-name": "/dev/null",
+        "batch-size": batch_size,
+        "network-file": f"{base_dir}/network_cost_v2.csv",
+        "object-store-file": f"{base_dir}/storage_pricing.csv",
+        "redundancy-elimination-workers": redundancy_elimination_workers,
+        #"output_candidates": ""
+        "experiment-name": experiment_name,
+        "influx-host": "flaminio.millennium.berkeley.edu"
+    }
 
     # Convert args to a list of strings with --key=value format
     args = [f"--{key}={value}" for key, value in args.items()]
@@ -119,14 +104,29 @@ async def main(args):
         } for i in range(redundancy_elimination_workers)
     }
 
+    # Create directory for experiment
+    os.makedirs(experiment_name)
+
+    deployment = hydro.Deployment()
+
+    localhost = deployment.Localhost()
+
     write_choices_service = deployment.HydroflowCrate(
         src="./skypie_lib",
         profile=profile,
-        #example="write_choices_simple_launch",
         example="write_choices_simple_demux_launch",
         on=localhost,
         display_id="write_choices",
         args=args + ['-o', f"{optimal_policies_name_prefix}.{optimal_policies_file_extension}"]
+    )
+
+    logging_service = deployment.HydroflowCrate(
+        src="./skypie_lib",
+        profile=profile,
+        example="logger_launch",
+        on=localhost,
+        display_id="logger",
+        args=args
     )
     
     candidates_service = [s for s in create_scale_up_service(deployment,
@@ -134,17 +134,18 @@ async def main(args):
         profile=profile,
         src="./skypie_lib",
         example="candidate_and_reduce_launch",
-        #example="counter",
         on=localhost,
         display_id="candidate_reduce",
-        #args=args,
-        # '--output-candidates-file-name', f'candidates_{i}.jsonl',
         kwargs_instances=kwargs_instances
         )]
 
     ## Connect named ports of services
     # Sender service's "output" port to receiver service's "input" port
     send_to_demux(write_choices_service, candidates_service)
+
+    # Send all timing information of the candidate services to the logging service
+    for s in candidates_service:
+        s.ports.time_output.send_to(logging_service.ports.input.merge())
 
     # Deploy and start, blocking until deployment is complete
     await deployment.deploy()
@@ -153,10 +154,6 @@ async def main(args):
 
     # Wait for user input to terminate
     input("Press enter to terminate...")
-
-
-    #print(f"Sender service exit code: {await sender_service.exit_code()}")
-    #print(f"Receiver service exit code: {await receiver_service.exit_code()}")
 
 if __name__ == "__main__":
     import sys

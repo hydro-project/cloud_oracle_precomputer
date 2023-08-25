@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
 use clap::Parser;
-use hydroflow::util::cli::{ConnectedDirect, ConnectedSource};
+use hydroflow::util::cli::{ConnectedDirect, ConnectedSource, ConnectedSink};
 
-use skypie_lib::{candidate_policies_reduce_hydroflow, Args, Loader, ApplicationRegion, influx_logger::{InfluxLogger, InfluxLoggerConfig}};
+use skypie_lib::{candidate_policies_reduce_hydroflow, Args, Loader, ApplicationRegion};
 
 #[hydroflow::main]
 async fn main() {
@@ -17,11 +17,11 @@ async fn main() {
         .await
         .into_source();
 
-    /* let output_send = ports
-        .port("output")
+    let time_sink = ports
+        .port("time_output")
         .connect::<ConnectedDirect>() 
         .await
-        .into_sink(); */
+        .into_sink();
 
     // Load the input
     let args = Args::parse();
@@ -35,16 +35,9 @@ async fn main() {
     let output_candidates_file_name: String = args.output_candidates_file_name.unwrap_or(PathBuf::from("/dev/null")).to_str().unwrap().into();
     let output_file_name = args.output_file_name.unwrap_or(PathBuf::from("/dev/null")).to_str().unwrap().into();
 
-    let logger = InfluxLogger::new(InfluxLoggerConfig{
-        host: args.influx_host.unwrap(),
-        port: 8086,
-        database: "skypie".to_string(),
-        measurement: "test".to_string(),
-    });
-
     let object_store_id_map = loader.object_stores.iter().map(|x| (x.id.clone(), x.clone())).collect::<std::collections::HashMap<_,_>>();
 
-    let flow = candidate_policies_reduce_hydroflow(regions, input_recv, args.batch_size, args.experiment_name, output_candidates_file_name, output_file_name, logger, object_store_id_map);
+    let flow = candidate_policies_reduce_hydroflow(regions, input_recv, args.batch_size, args.experiment_name, output_candidates_file_name, output_file_name, object_store_id_map, time_sink);
 
     println!("Launching candidate and reduce");
     hydroflow::util::cli::launch_flow(flow).await;
