@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::io::Write;
+use std::path::PathBuf;
 use std::time::Duration;
 
 use clap::Parser;
@@ -44,23 +44,35 @@ async fn main() {
     }.plane_iter().len() as i64;
 
     let optimal_partitions: Vec<String> = if let Some(output_file_name) = args.output_file_name {
-        let file_extension = output_file_name.extension().unwrap().to_str().unwrap();
-        let file_name = output_file_name.file_stem().unwrap().to_str().unwrap();
+        let file_name_with_ext2 = output_file_name.file_stem().unwrap().to_str().unwrap();
+        let pbuf = PathBuf::from(file_name_with_ext2);
+        
+        let file_extension_outer = output_file_name.extension().unwrap().to_str().unwrap();
+        let file_extension_inner = pbuf.extension().unwrap_or_default().to_str().unwrap();
+        let file_name = pbuf.file_stem().unwrap().to_str().unwrap();
+        
         (0..args.redundancy_elimination_workers)
-            .map(|i| format!("{}_{}.{}", file_name, i, file_extension))
+            .map(|i| format!("{}_{}.{}.{}", file_name, i, file_extension_inner, file_extension_outer))
             .collect_vec()
     } else {
         vec![]
     };
     let candidate_partitions: Vec<String> = if let Some(output_file_name) = args.output_candidates_file_name {
-        let file_extension = output_file_name.extension().unwrap().to_str().unwrap();
-        let file_name = output_file_name.file_stem().unwrap().to_str().unwrap();
+        let file_name_with_ext2 = output_file_name.file_stem().unwrap().to_str().unwrap();
+        let pbuf = PathBuf::from(file_name_with_ext2);
+        
+        let file_extension_outer = output_file_name.extension().unwrap().to_str().unwrap();
+        let file_extension_inner = pbuf.extension().unwrap_or_default().to_str().unwrap();
+        let file_name = pbuf.file_stem().unwrap().to_str().unwrap();
+        
         (0..args.redundancy_elimination_workers)
-            .map(|i| format!("{}_{}.{}", file_name, i, file_extension))
+            .map(|i| format!("{}_{}.{}.{}", file_name, i, file_extension_inner, file_extension_outer))
             .collect_vec()
     } else {
         vec![]
     };
+
+    let (optimizer_name, optimizer_type) = skypie_lib::optimizer_stats::get_optimizer_json(args.batch_size);
 
     let replication_factor = args.replication_factor as u64;
 
@@ -75,7 +87,9 @@ async fn main() {
         optimal_partitions,
         replication_factor,
         no_app_regions,
-        no_dimensions
+        no_dimensions,
+        optimizer_name.clone(),
+        optimizer_type
     );
 
     let flow = hydroflow_syntax! {
@@ -91,13 +105,17 @@ async fn main() {
                 let write_chioce_time = x.get(&SkyPieLogEntryType::WriteChoiceGeneration).unwrap_or(&zero_duration);
                 let total_time = *total_time + *write_chioce_time;
 
+                if *redundancy_elimination_time == zero_duration {
+                    return;
+                }
+
                 let enumerator_time = if total_time < *redundancy_elimination_time {
                     println!("Temporary inconsistency, total time is less than redundancy elimination time!");
                     Duration::default()
                 } else {
                     total_time - (*redundancy_elimination_time)
                 };
-                println!("Total time: {:?}, Enumerator time: {:?}, Redundancy elimination time: {:?}, Write Choice time: {:?}", total_time, enumerator_time, redundancy_elimination_time, write_chioce_time);
+                println!("{}: Total time: {:?}, Enumerator time: {:?}, Redundancy elimination time: {:?}, Write Choice time: {:?}", context.current_tick(), total_time, enumerator_time, redundancy_elimination_time, write_chioce_time);
 
                 let partitioner_time_ns = redundancy_elimination_time.as_secs() as i64 * 1_000_000_000 + redundancy_elimination_time.subsec_nanos() as i64;
 
@@ -110,7 +128,7 @@ async fn main() {
                 let optimizer = stats.tier_advise.as_mut().unwrap()
                     .replication_factor.entry(replication_factor).or_default()
                     .runs.entry("place_holder".to_string()).or_default()
-                    .optimal_partitions_by_optimizer.entry("MosekOptimizerType.InteriorPoint_Clarkson_iter0_dsize1000".to_string()).or_default();
+                    .optimal_partitions_by_optimizer.entry(optimizer_name.clone()).or_default();
     
                 optimizer.partitioner_computation_time_ns = Some(partitioner_time_ns);
                 optimizer.partitioner_time_ns = Some(partitioner_time_ns);

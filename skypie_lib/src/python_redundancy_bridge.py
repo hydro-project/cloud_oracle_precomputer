@@ -1,15 +1,18 @@
 from skypie import *
 import numpy as np
 
-def load_args():
+def load_args(*, dsize=1000, useClarkson_=False, optimizerThreads=1, verbose_=0, optimizer="InteriorPoint"):
+    global algoArgs, optimizerType, useClarkson, verbose
+
     # Ignore args: torchDeviceRayShooting: str, normalize: bool, optimizerThreads: int, nonnegative: bool, optimizerType: str
     
-    #optimizers = [ "lrs", "ILP", "PrimalSimplex", "InteriorPoint", "Free"]
+    optimizers = [ "lrs", "ILP", "PrimalSimplex", "InteriorPoint", "Free"]
+    assert optimizer in optimizers, f"Optimizer {optimizer} not in {optimizers}"
 
-    optimizer = "InteriorPoint"
+    #optimizer = "InteriorPoint"
 
     args = {
-        "useClarkson": [False],
+        "useClarkson": [useClarkson_],
         "useGPU": [False],
         "torchDeviceRayShooting": "cpu",
         #"device_query": "cpu",
@@ -19,13 +22,14 @@ def load_args():
     algoArgs = {
         "torchDeviceRayShooting": "cpu",
         #"normalize": "False", # Ignore normalization
-        "optimizerThreads": 1,
+        "optimizerThreads": optimizerThreads,
         "nonnegative": True,
-        "verbose": 0
+        "verbose": verbose_
     }
 
     # Load details of optimizer configuration
     optimizerType = createOptimizer(optimizer=optimizer, args=args)[0]
+    optimizerType = optimizerType.custom_copy(dsize=dsize)
 
     algoArgs["optimizerType"] = optimizerType
 
@@ -38,14 +42,39 @@ def load_args():
         #if not torch.cuda.is_available():
         #    raise RuntimeError("cuda is unavailable, but requested for rayshooting")
 
-    return algoArgs
+    #return algoArgs
 
-# Initialize optimizer once
-algoArgs = load_args()
-optimizerType = algoArgs["optimizerType"]
-useClarkson = optimizerType.useClarkson
-del algoArgs["optimizerType"]
-verbose = algoArgs.get("verbose", 0)
+    # Initialize optimizer once
+    #algoArgs = load_args()
+    optimizerType = algoArgs["optimizerType"]
+    useClarkson = optimizerType.useClarkson
+    del algoArgs["optimizerType"]
+    verbose = algoArgs.get("verbose", 0)
+
+
+"""
+let optimizer_type = r#"
+            {
+                "type": "intpnt",
+                "useClarkson": true,
+                "useGPU": false,
+                "name": "MosekOptimizerType.InteriorPoint_Clarkson_iter0_dsize1000",
+                "implementation": 1,
+                "implementationArgs": {
+                    "device_query": "cuda:1",
+                    "device_check": "cuda:1"
+                },
+                "iteration": 0,
+                "dsize": 1000,
+                "strictReplication": true
+            }
+            "#
+            .to_string();
+"""
+import json
+def get_optimizer_json():
+    global optimizerType
+    return (optimizerType.name, json.dumps(optimizerType, cls=EnhancedJSONEncoder))
 
 def redundancy_elimination(inequalities: np.array):
     # , useClarkson: bool, algoArgs: Dict[Any, Any]
@@ -107,4 +136,6 @@ def redundancy_elimination_test():
     assert nonredundant == expected, f"Expected {expected}, got {nonredundant}"
 
 if __name__ == "__main__":
+    load_args()
     redundancy_elimination_test()
+    get_optimizer_json()

@@ -65,7 +65,7 @@ async fn main() {
 
     let object_store_ids = object_stores.iter().map(|x| x.id).collect::<Vec<_>>();
 
-    let iter_batch_size = 20; //args.batch_size*20;
+    let iter_batch_size = 5000; //args.batch_size*20;
     let iter = IterWrapper::new(object_store_ids, replication_factor);
     let combo_batches_stream = iter_stream_batches(iter, iter_batch_size);
 

@@ -59,19 +59,22 @@ async def main(args):
     #profile = "dev"
     profile = "release" # Use default profile
     base_dir = "/home/vscode/sky-pie-precomputer"
-    replication_factor = 3
-    region_selector = "aws|azure"
-    batch_size = 200
+    replication_factor = 2
+    #replication_factor = 3
+    #region_selector = "aws|azure"
+    region_selector = "aws"
+    batch_size = 400
     redundancy_elimination_workers = 1
     now = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     experiment_name = f"experiments/experiment-{now}"
     
     print(args)
     if len(args) > 0 and args[0] == "local":
-        redundancy_elimination_workers = 1
+        profile = "dev"
+        redundancy_elimination_workers = 2
         #replication_factor = 3
     else:
-        redundancy_elimination_workers = 200
+        redundancy_elimination_workers = 60
         #replication_factor = 5
 
     args = {
@@ -118,10 +121,7 @@ async def main(args):
         example="write_choices_simple_demux_launch",
         on=localhost,
         display_id="write_choices",
-        args=args + [
-            '-o', f"{optimal_policies_name_prefix}.{output_file_extension}",
-            "--output-candidates-file-name", f"{experiment_name}/{candidate_policies_name_prefix}.{output_file_extension}"
-        ]
+        args=args
     )
 
     logging_service = deployment.HydroflowCrate(
@@ -130,7 +130,10 @@ async def main(args):
         example="logger_launch",
         on=localhost,
         display_id="logger",
-        args=args
+        args=args + [
+            '-o', f"{optimal_policies_name_prefix}.{output_file_extension}",
+            "--output-candidates-file-name", f"{experiment_name}/{candidate_policies_name_prefix}.{output_file_extension}"
+        ]
     )
     
     candidates_service = [s for s in create_scale_up_service(deployment,
@@ -150,6 +153,9 @@ async def main(args):
     # Send all timing information of the candidate services to the logging service
     for s in candidates_service:
         s.ports.time_output.send_to(logging_service.ports.input.merge())
+
+    # Send timing information of the write choices service to the logging service
+    write_choices_service.ports.time_output.send_to(logging_service.ports.input.merge())
 
     # Deploy and start, blocking until deployment is complete
     await deployment.deploy()

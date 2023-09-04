@@ -35,6 +35,7 @@ pub mod noop_logger;
 pub mod log_entry;
 pub mod output;
 pub mod iter_stream_batches;
+pub mod optimizer_stats;
 
 pub use loader::Loader;
 pub use candidate_policies_hydroflow::candidate_policies_hydroflow;

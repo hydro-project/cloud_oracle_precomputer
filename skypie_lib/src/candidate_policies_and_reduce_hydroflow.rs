@@ -1,8 +1,8 @@
-use std::{collections::HashMap, path::Path, io::Write};
+use std::{collections::HashMap, path::Path};
 
 use hydroflow::{hydroflow_syntax, tokio_stream::Stream, bytes::{BytesMut, Bytes}, util::{deserialize_from_bytes, serialize_to_bytes}, futures::Sink};
 use itertools::Itertools;
-use pyo3::{Python, PyAny, Py, types::PyModule};
+use pyo3::{Python, PyAny, Py, types::{PyModule, PyDict}};
 use skypie_proto_messages::ProtobufFileSink;
 
 use crate::{
@@ -51,11 +51,16 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
     let code = include_str!("python_redundancy_bridge.py");
     let fun = Python::with_gil(|py| {
 
+        // Load python code as module
+        let module = PyModule::from_code(py, code, "", module).unwrap();
+        // Load arguments via python function "load_args"
+        let kwargs = PyDict::new(py);
+        kwargs.set_item("dsize", batch_size).unwrap();
+        module.call_method("load_args", (), Some(kwargs)).unwrap();
+        // Get reference to python function for redundancy elimination
         let fun: Py<PyAny> =
             //PyModule::import(py, module)
-            PyModule::from_code(py, code, "", module)
-            .unwrap()
-            .getattr(fun_name)
+            module.getattr(fun_name)
             .unwrap()
             .into();
         fun
@@ -197,7 +202,9 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
         });
 
         // Redundancy elimination via python
-        optimal_zip = batches -> map(|decisions| {
+        optimal_zip = batches -> map(|decisions: Vec<Decision>| {
+            let no_candidates = decisions.len();
+
             // Start time of computing optimal decisions
             let start = std::time::Instant::now();
 
@@ -225,6 +232,12 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
             // End time of computing optimal decisions
             let end = std::time::Instant::now();
             let duration = end - start;
+
+            let no_optimal = optimal.len();
+            println!("Optimal: {}/{} (-{})", no_optimal, no_candidates,  no_candidates - no_optimal);
+            /* if diff <= 5 {
+                println!("Optimal: {}/{} (-{})", no_optimal, no_candidates,  no_candidates - no_optimal);
+            } */
 
             (duration, optimal)
         })

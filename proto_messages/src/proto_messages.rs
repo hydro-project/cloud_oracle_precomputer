@@ -23,6 +23,8 @@ mod messages {
             replication_factor: u64,
             no_app_regions: i64,
             no_dimensions: i64,
+            optimizer_name: String,
+            optimizer_type: String
         ) -> Self {
             let max_replication_factor = replication_factor;
             let min_replication_factor = replication_factor;
@@ -35,6 +37,8 @@ mod messages {
                 optimal_partitions,
                 no_app_regions,
                 no_dimensions,
+                optimizer_name,
+                optimizer_type
             );
 
             let tier_advise = Some(TierAdvise::new(replication_factor, run));
@@ -49,7 +53,7 @@ mod messages {
         /// * `path` - A string slice that holds the path where the binary file will be saved.
         ///
         pub fn save(&self, path: &str) {
-            let file_name = format!("{}.bin", path);
+            let file_name = format!("{}.proto.bin", path);
             let file_name = Path::new(&file_name);
             let capa = self.encoded_len() + 42;
             let mut sink = ProtobufFileSink::new(file_name, capa, 0).unwrap();
@@ -80,6 +84,8 @@ mod messages {
             optimal_partitions: Vec<String>,
             no_app_regions: i64,
             no_dimensions: i64,
+            optimizer_name: String,
+            optimizer_type: String
         ) -> Run {
             let no_app_regions = Some(no_app_regions);
 
@@ -90,8 +96,8 @@ mod messages {
             let object_stores_considered = object_stores;
 
             let optimal_partitions_by_optimizer = HashMap::from_iter(vec![(
-                "MosekOptimizerType.InteriorPoint_Clarkson_iter0_dsize1000".into(),
-                OptimalByOptimizer::new(optimal_partitions),
+                optimizer_name.into(),
+                OptimalByOptimizer::new(optimal_partitions, optimizer_type),
             )]);
 
             Run {
@@ -111,27 +117,10 @@ mod messages {
     }
 
     impl OptimalByOptimizer {
-        pub fn new(optimal_partitions: Vec<String>) -> OptimalByOptimizer {
+        pub fn new(optimal_partitions: Vec<String>, optimizer_type: String) -> OptimalByOptimizer {
             let partitioner_time_ns = Some(0);
             let partitioner_computation_time_ns = Some(0);
 
-            let optimizer_type = r#"
-            {
-                "type": "intpnt",
-                "useClarkson": true,
-                "useGPU": false,
-                "name": "MosekOptimizerType.InteriorPoint_Clarkson_iter0_dsize1000",
-                "implementation": 1,
-                "implementationArgs": {
-                    "device_query": "cuda:1",
-                    "device_check": "cuda:1"
-                },
-                "iteration": 0,
-                "dsize": 1000,
-                "strictReplication": true
-            }
-            "#
-            .to_string();
             let optimizer_type = Some(optimizer_type);
 
             OptimalByOptimizer {
