@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
 use crate::object_store::ObjectStore;
-use crate::ApplicationRegion;
+use crate::{ApplicationRegion, Tombstone};
 
 use super::identifier::Identifier;
 
@@ -77,5 +77,20 @@ impl<K> Default for ReadChoiceVec<K> {
         ReadChoiceVec {
             read_choices: Vec::default(),
         }
+    }
+}
+
+impl<K> Tombstone for ReadChoiceVec<K>
+where
+    K: Default + Identifier<u16> + PartialEq + std::clone::Clone,
+{
+    fn tombstone() -> Self {
+        ReadChoiceVec {
+            read_choices: Vec::new(),
+        }
+    }
+
+    fn is_tombstone(&self) -> bool {
+        self.read_choices.is_empty()
     }
 }

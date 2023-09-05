@@ -36,6 +36,7 @@ pub mod log_entry;
 pub mod output;
 pub mod iter_stream_batches;
 pub mod optimizer_stats;
+pub mod tombstone;
 
 pub use loader::Loader;
 pub use candidate_policies_hydroflow::candidate_policies_hydroflow;
@@ -47,3 +48,4 @@ pub use decision::Decision;
 pub use application_region::ApplicationRegion;
 //pub use influx_logger;
 pub use log_entry::SkyPieLogEntry;
+pub use tombstone::Tombstone;

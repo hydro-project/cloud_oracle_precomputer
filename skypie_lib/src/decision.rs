@@ -7,7 +7,7 @@ use pyo3::{Py, Python};
 
 use crate::read_choice::ReadChoice;
 use crate::write_choice::WriteChoice;
-use crate::ApplicationRegion;
+use crate::{ApplicationRegion, Tombstone};
 
 use super::object_store::ObjectStore;
 use super::output::{OutputDecision, OutputScheme, OutputAssignment};
@@ -29,6 +29,19 @@ impl Decision {
     
     pub fn plane_iter<'a>(&'a self) -> DecisionCostIter<'a> {
         DecisionCostIter::new(self, true)
+    }
+}
+
+impl Tombstone for Decision {
+    fn tombstone() -> Self {
+        Decision {
+            write_choice: WriteChoice::tombstone(),
+            read_choice: Default::default(),
+        }
+    }
+
+    fn is_tombstone(&self) -> bool {
+        self.write_choice.is_tombstone()
     }
 }
 

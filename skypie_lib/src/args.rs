@@ -46,4 +46,10 @@ pub struct Args {
 
     #[clap(long)]
     pub influx_host: Option<String>,
+
+    #[clap(long)]
+    pub worker_id: usize,
+
+    #[clap(long)]
+    pub num_workers: usize,
 }

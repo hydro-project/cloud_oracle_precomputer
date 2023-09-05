@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::ApplicationRegion;
+use crate::{ApplicationRegion, Tombstone};
 use crate::network_record::NetworkCostMap;
 use crate::{region::Region, range::Range};
 use std::collections::HashMap;
@@ -156,6 +156,21 @@ pub struct ObjectStoreStruct {
     //pub egress_cost: f64
 }
 
+impl Tombstone for ObjectStoreStruct {
+    fn tombstone() -> Self {
+        ObjectStoreStruct {
+            id: u16::MAX-1,
+            name: "".to_string(),
+            region: Region::default(),
+            cost: Cost::default()
+        }
+    }
+
+    fn is_tombstone(&self) -> bool {
+        self.id == u16::MAX-1
+    }
+}
+
 impl Identifier<u16> for ObjectStoreStruct {
     fn get_id(&self) -> u16 {
         self.id
@@ -265,5 +280,15 @@ impl ObjectStoreStruct {
 impl Default for ObjectStore {
     fn default() -> Self {
         ObjectStore::new(ObjectStoreStruct{id: u16::MAX, name: "".to_string(), cost: Cost::default(), region: Region::default()})
+    }
+}
+
+impl Tombstone for ObjectStore {
+    fn tombstone() -> Self {
+        ObjectStore::new(ObjectStoreStruct::tombstone())
+    }
+
+    fn is_tombstone(&self) -> bool {
+        self.as_ref().is_tombstone()
     }
 }

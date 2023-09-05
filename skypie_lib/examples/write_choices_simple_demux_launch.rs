@@ -12,12 +12,14 @@ use skypie_lib::Loader;
 
 struct IterWrapper {
     iter: itertools::Combinations<std::vec::IntoIter<u16>>,
+    end: bool,
 }
 
 impl IterWrapper {
     pub fn new(object_stores: Vec<u16>, n: usize) -> IterWrapper {
         IterWrapper {
             iter: object_stores.into_iter().combinations(n),
+            end: false,
         }
     }
 }
@@ -26,7 +28,15 @@ impl Iterator for IterWrapper {
     type Item = Vec<u16>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next()
+        let res = self.iter.next();
+        if res.is_some() {
+            res
+        } else if !self.end {
+            self.end = true;
+            Some(vec![])
+        } else {
+            None
+        }
     }
 }
 
@@ -72,17 +82,34 @@ async fn main() {
     let flow = hydroflow_syntax! {
         write_choices = source_stream(combo_batches_stream);
         // Distribute the write choices among instances of next stage
-        serialized = write_choices
-            -> map(|x| serialize_to_bytes(x))
+        branched_payload_and_tombstone = write_choices
             -> inspect(|_|{
                 output_monitor.add_arrival_time_now();
                 output_monitor.print("Write choices:", Some(output_log_frequency));
             })
-            // Round robin send to the next stage
+            -> demux(|v: Vec<u16>, var_args!(payload, tombstone)| {
+                if v.len() > 0 {
+                    payload.give(v)
+                }
+                else {
+                    tombstone.give(v)
+                }
+            });
+
+        // Round robin send payload to one worker of the next stage
+        branched_payload_and_tombstone[payload]
             -> map(|x| -> (u32, _) {(context.current_tick() as u32 % redundancy_elimination_workers, x)})
-            -> tee();
+            -> serialized;
             //-> map(|x| (rng.gen_range(0..redundancy_elimination_workers), x));
 
+        // Broadcast tombstone to all workers of the next stage
+        source_iter(0..redundancy_elimination_workers) -> persist() -> [0]broadcast_tombstone;
+        branched_payload_and_tombstone[tombstone] -> [1]broadcast_tombstone;
+        broadcast_tombstone = cross_join_multiset() 
+            -> inspect(|(id, _): &(u32, _)| println!("Tombstone sent to {}", id))
+            -> serialized;
+
+        serialized = union() -> map(|(id, payload): (u32, Vec<u16>)| (id, serialize_to_bytes(payload))) -> tee();
         serialized -> dest_sink(output_send);
 
         // Measure the total cycle time here

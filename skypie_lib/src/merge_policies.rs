@@ -1,6 +1,7 @@
 use itertools::Itertools;
 
 pub use crate::ApplicationRegion;
+use crate::Tombstone;
 use crate::decision::Decision;
 use crate::object_store::ObjectStore;
 use crate::read_choice::ReadChoice;
@@ -76,13 +77,32 @@ impl MergeIterator {
     }
 }
 
+impl Tombstone for MergeIterator {
+    fn tombstone() -> Self {
+        MergeIterator {
+            iter: vec![].into_iter(),
+            cur_s: f64::NAN,
+            cur_a: Default::default(),
+            write_choice: Default::default(),
+        }
+    }
+
+    fn is_tombstone(&self) -> bool {
+        self.cur_s.is_nan()
+    }
+}
+
 impl Iterator for MergeIterator {
     type Item = Decision;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.cur_a.is_empty() {
+
+        if self.cur_s.is_nan() { // This is a special case, where we emit a tombstone decision
+            self.cur_s = f64::INFINITY;
+            return Some(Tombstone::tombstone());
+        } else if self.cur_a.is_empty() { // End of iterator
             return None;
-        } else {
+        } else { // Iterator has items
             // XXX: Materializing the write set here!
             while let Some((s, (r, o))) = self.iter.next() {
                 if s > self.cur_s {

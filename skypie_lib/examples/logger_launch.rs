@@ -24,8 +24,15 @@ async fn main() {
         &args.region_selector,
     );
 
-    let input_recv = ports
-        .port("input")
+    let time_input_recv = ports
+        .port("time_input")
+        // connect to the port with a single recipient
+        .connect::<ConnectedDirect>() 
+        .await
+        .into_source();
+
+    let done_input_recv = ports
+        .port("done_input")
         // connect to the port with a single recipient
         .connect::<ConnectedDirect>() 
         .await
@@ -94,7 +101,23 @@ async fn main() {
 
     let flow = hydroflow_syntax! {
 
-        input = source_stream(input_recv) -> map(|x| -> Input {deserialize_from_bytes(x.unwrap()).unwrap()});
+        done_input = source_stream(done_input_recv)
+            -> map(|x| -> usize {deserialize_from_bytes(x.unwrap()).unwrap()})
+            // Remember all finished workers
+            -> persist()
+            // Collect all finished workers
+            -> fold(Vec::new(), |acc: &mut Vec<_>, x| {acc.push(x);})
+            -> inspect(|x| {
+                println!("Workers done: {} ({:?})", x.len(), x);
+            })
+            -> map(|x| x.len() == (args.num_workers-1))
+            -> for_each(|x| {
+                if x {
+                    println!("All workers done!");
+                }
+            });
+
+        input = source_stream(time_input_recv) -> map(|x| -> Input {deserialize_from_bytes(x.unwrap()).unwrap()});
         input -> fold::<'static>(Default::default(), |map: &mut HashMap::<SkyPieLogEntryType, Duration>, (entry_type, duration)|{
                 *(map.entry(entry_type).or_default()) += duration;
             })

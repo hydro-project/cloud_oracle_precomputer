@@ -77,6 +77,9 @@ async def main(args):
         redundancy_elimination_workers = 60
         #replication_factor = 5
 
+    num_workers = 2 + redundancy_elimination_workers
+    num_workers = num_workers - 1 # Write choices services is currently not sending a done signal
+
     args = {
         "region-selector": region_selector,
         "replication-factor": replication_factor,
@@ -87,7 +90,8 @@ async def main(args):
         "redundancy-elimination-workers": redundancy_elimination_workers,
         #"output_candidates": ""
         "experiment-name": experiment_name,
-        "influx-host": "flaminio.millennium.berkeley.edu"
+        "influx-host": "flaminio.millennium.berkeley.edu",
+        "num-workers": num_workers
     }
 
     # Convert args to a list of strings with --key=value format
@@ -101,6 +105,7 @@ async def main(args):
     kwargs_instances={
         i: {"args":(
             args + [
+                '--worker-id', f"{i}",
                 '--executor-name', f"candidate_executor_{i}",
                 '-o', f'{experiment_name}/{optimal_policies_name_prefix}_{i}.{output_file_extension}',
                 "--output-candidates-file-name", f"{experiment_name}/{candidate_policies_name_prefix}_{i}.{output_file_extension}"]
@@ -121,7 +126,7 @@ async def main(args):
         example="write_choices_simple_demux_launch",
         on=localhost,
         display_id="write_choices",
-        args=args
+        args=args + ['--worker-id', "10000"]
     )
 
     logging_service = deployment.HydroflowCrate(
@@ -131,6 +136,7 @@ async def main(args):
         on=localhost,
         display_id="logger",
         args=args + [
+            '--worker-id', "10001",
             '-o', f"{optimal_policies_name_prefix}.{output_file_extension}",
             "--output-candidates-file-name", f"{experiment_name}/{candidate_policies_name_prefix}.{output_file_extension}"
         ]
@@ -152,10 +158,11 @@ async def main(args):
 
     # Send all timing information of the candidate services to the logging service
     for s in candidates_service:
-        s.ports.time_output.send_to(logging_service.ports.input.merge())
+        s.ports.time_output.send_to(logging_service.ports.time_input.merge())
+        s.ports.done_output.send_to(logging_service.ports.done_input.merge())
 
     # Send timing information of the write choices service to the logging service
-    write_choices_service.ports.time_output.send_to(logging_service.ports.input.merge())
+    write_choices_service.ports.time_output.send_to(logging_service.ports.time_input.merge())
 
     # Deploy and start, blocking until deployment is complete
     await deployment.deploy()

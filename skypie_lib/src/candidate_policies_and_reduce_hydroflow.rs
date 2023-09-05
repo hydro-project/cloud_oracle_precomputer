@@ -15,7 +15,7 @@ use crate::{
     monitor::{MonitorNOOP, MonitorMovingAverage},
     merge_policies::MergeIterator,
     ApplicationRegion,
-    log_entry::SkyPieLogEntryType
+    log_entry::SkyPieLogEntryType, Tombstone
 };
 
 pub type InputType = WriteChoice;
@@ -23,7 +23,7 @@ pub type OutputType = Decision;
 pub type InputConnection = std::pin::Pin<Box<dyn Stream<Item = Result<BytesMut, std::io::Error>> + Send + Sync>>;
 pub type OutputConnection = std::pin::Pin<Box<dyn Sink<Bytes, Error = std::io::Error> + Send + Sync>>;
 
-pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<ApplicationRegion>, input: InputConnection, batch_size: usize, _experiment_name: String, output_candidates_file_name: String, output_file_name: String, object_store_id_map: HashMap<u16, ObjectStore>, time_sink: OutputConnection) -> hydroflow::scheduled::graph::Hydroflow
+pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<ApplicationRegion>, input: InputConnection, batch_size: usize, _experiment_name: String, output_candidates_file_name: String, output_file_name: String, object_store_id_map: HashMap<u16, ObjectStore>, time_sink: OutputConnection, done_sink: OutputConnection, worker_id: usize) -> hydroflow::scheduled::graph::Hydroflow
 {
     {
         // Validate application regions
@@ -56,7 +56,11 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
         // Load arguments via python function "load_args"
         let kwargs = PyDict::new(py);
         kwargs.set_item("dsize", batch_size).unwrap();
-        module.call_method("load_args", (), Some(kwargs)).unwrap();
+        let res = module.call_method("load_args", (), Some(kwargs));
+        if let Err(e) = res {
+            println!("Error in load_args: {}", e);
+        }
+
         // Get reference to python function for redundancy elimination
         let fun: Py<PyAny> =
             //PyModule::import(py, module)
@@ -146,40 +150,55 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
         -> tee(); */
 
         // Non-hydro version
-        candidates = source_in -> map(|write_choice_ids: Vec<u16>| {
+        tombstone_signal = source_in -> demux(|v: Vec<u16>, var_args!(payload, tombstone)| {
+            if v.len() == 0 {
+                tombstone.give(v.clone());
+            }
+            payload.give(v);
+        });
 
-            //object_store_id_map
-            let object_stores = write_choice_ids.iter().map(|id|{
-                object_store_id_map.get(id).unwrap().clone()
-            }).collect_vec();
-            let write_choice = WriteChoice{object_stores};
+        // Signal termination of this worker after draining all work
+        tombstone_signal[tombstone] -> defer_tick() -> map(|_|{serialize_to_bytes(worker_id)}) -> dest_sink(done_sink);
 
-            let write_choice = Box::<WriteChoice>::new(write_choice);
-            //let mut i = 0; // for debugging
-            let assignments = regions.iter().map(|r|{
-                // Get optimal assignments of region r
-                let assignments = opt_assignments(write_choice.clone(), r);
-                // Convert to (upper bound, object store) pairs 
-                let assignments = assignments.map(|(o, range)|(range.max, o));
+        candidates = tombstone_signal[payload] -> map(|write_choice_ids: Vec<u16>| {
+            if write_choice_ids.len() > 0 {
 
-                // Collect into vector
-                return (r.clone(), assignments.collect::<Vec<(f64, ObjectStore)>>());
-            });
+                //object_store_id_map
+                let object_stores = write_choice_ids.iter().map(|id|{
+                    object_store_id_map.get(id).unwrap().clone()
+                }).collect_vec();
+                let write_choice = WriteChoice{object_stores};
 
-            // Merge assignments per region to candidate policies
-            // XXX: Materializing here is not necessary
-            // In HyrdoFlow, use stream of (region, upper bound, object store), then search min per region and then merge?
-            let assignments = HashMap::from_iter(assignments);
+                let write_choice = Box::<WriteChoice>::new(write_choice);
+                //let mut i = 0; // for debugging
+                let assignments = regions.iter().map(|r|{
+                    // Get optimal assignments of region r
+                    let assignments = opt_assignments(write_choice.clone(), r);
+                    // Convert to (upper bound, object store) pairs 
+                    let assignments = assignments.map(|(o, range)|(range.max, o));
 
-            // XXX: Debug output for optimal assignments
-            /* write_choice.object_stores.iter().for_each(|o|println!("Object store: {}-{}", o.region.name, o.name));
-            assignments.iter().for_each(|(k, v)|println!("Region {}: {:?}", k.region.name, v.iter().map(|(ub, o)|format!("({}, {}-{})", ub, o.region.name, o.name)).collect::<Vec<String>>())); */
+                    // Collect into vector
+                    return (r.clone(), assignments.collect::<Vec<(f64, ObjectStore)>>());
+                });
 
-            return MergeIterator::new(write_choice, assignments);
+                // Merge assignments per region to candidate policies
+                // XXX: Materializing here is not necessary
+                // In HyrdoFlow, use stream of (region, upper bound, object store), then search min per region and then merge?
+                let assignments = HashMap::from_iter(assignments);
+
+                // XXX: Debug output for optimal assignments
+                /* write_choice.object_stores.iter().for_each(|o|println!("Object store: {}-{}", o.region.name, o.name));
+                assignments.iter().for_each(|(k, v)|println!("Region {}: {:?}", k.region.name, v.iter().map(|(ub, o)|format!("({}, {}-{})", ub, o.region.name, o.name)).collect::<Vec<String>>())); */
+
+                return MergeIterator::new(write_choice, assignments);
+            } else {
+                return MergeIterator::tombstone();
+            }
         }) -> flatten() -> tee();
 
         // Output candidates
         candidates
+        -> filter(|d|{!d.is_tombstone()}) // Filter out tombstones for file output
         -> map(|d: Decision| -> skypie_proto_messages::Decision {d.into()})
         -> dest_sink(candidate_proto_sink);
 
@@ -194,7 +213,12 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
         // Filter_map drops None values
         // XXX: Use hydro's batch operator. But it has to have sufficient items, about batch size!
         -> filter_map(|x: Input|{
-            return batcher.add(x)
+            if x.is_tombstone() {
+                println!("Flushing batcher: {}", batcher.get_batch().len());
+                batcher.flush()
+            } else {
+                batcher.add(x)
+            }
         })
         -> inspect(|_|{
             reduce_batch_monitor.add_arrival_time_now();

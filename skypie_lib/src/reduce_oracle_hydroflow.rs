@@ -31,5 +31,16 @@ impl<T> BatcherMap<T>
         &self.batch
     }
 
+    pub fn flush(&mut self) -> Option<Vec<T>> {
+        if self.batch.is_empty() {
+            None
+        } else {
+            let mut batch = Self::allocate_batch(self.batch_size);
+            std::mem::swap(&mut batch, &mut self.batch);
+            
+            Some(batch)
+        }
+    }
+
     // Fixme: Loosing items of the last incomplete batch, new do drain at the end!
 }
