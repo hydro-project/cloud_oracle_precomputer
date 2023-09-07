@@ -1,6 +1,30 @@
+import asyncio
 import hydro
 import os
-from datetime import datetime
+import argparse
+from dataclasses import dataclass, field
+import json
+from typing import Any
+import sys
+
+@dataclass
+class Tee:
+    file: Any
+    stdout: Any = field(init=False)
+
+    def __post_init__(self):
+        #self.file = open(name, mode)
+        self.stdout = sys.stdout
+        sys.stdout = self
+    def close(self):
+        self.flush()
+        sys.stdout = self.stdout
+        self.file.close()
+    def write(self, data):
+        self.file.write(data)
+        self.stdout.write(data)
+    def flush(self):
+        self.file.flush()
 
 def create_scale_up_service(deployment, *args, num_scale_up, display_id, kwargs_instances=dict(), **kwargs):
     """
@@ -54,42 +78,60 @@ def send_to_demux(src_service, dest_services):
         i: s.ports.input.merge() for i, s in enumerate(dest_services)
     }))
 
-async def main(args):
+@dataclass
+class Experiment:
+    replication_factor: int
+    region_selector: str
+    redundancy_elimination_workers: int
+    batch_size: int = 400
+    experiment_dir: str = field(default_factory=lambda: os.path.join(os.getcwd(), "experiments"))
+    hydro_dir: str = field(default_factory=lambda: os.path.join(os.getcwd(), "skypie_lib"))
+    data_dir: str = field(default_factory=os.getcwd)
+    profile: str = "release"
+    object_store_selector: str = ""
+    name: "str|None" = None
+    experiment_dir_full: str = "" # This is set in __post_init__
 
-    #profile = "dev"
-    profile = "release" # Use default profile
-    base_dir = "/home/vscode/sky-pie-precomputer"
-    replication_factor = 2
-    #replication_factor = 3
-    #region_selector = "aws|azure"
-    region_selector = "aws"
-    batch_size = 400
-    redundancy_elimination_workers = 1
-    now = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    experiment_name = f"experiments/experiment-{now}"
-    
-    print(args)
-    if len(args) > 0 and args[0] == "local":
-        profile = "dev"
-        redundancy_elimination_workers = 2
-        #replication_factor = 3
-    else:
-        redundancy_elimination_workers = 60
-        #replication_factor = 5
+    def __post_init__(self):
+        
+        # Create a translation table that replaces all unfriendly characters with -
+        unfriendly_chars = ["|", "*", " ", "(", ")", "[", "]", "{", "}", ":", ";", ",", ".", "<", ">", "/", "\\", "?", "'", "\"", "\n", "\t", "\r", "\v", "\f"]
+        translation_table = str.maketrans({c: "-" for c in unfriendly_chars})
 
-    num_workers = 2 + redundancy_elimination_workers
+        # Use the translation table to replace all unfriendly characters
+        friendly_region = self.region_selector.translate(translation_table)
+        friendly_object_store = self.object_store_selector.translate(translation_table)
+
+        # Create the name of the experiment
+        paths = ([self.name] if self.name is not None else []) + \
+            [friendly_region, friendly_object_store, str(self.replication_factor), str(self.redundancy_elimination_workers)]
+        self.experiment_dir_full = os.path.join(self.experiment_dir, *paths)
+
+    def copy(self, **kwargs):
+        kwargs = {**self.__dict__, **kwargs}
+        return Experiment(**kwargs)
+
+
+    def as_replication_factors(self, min_replication_factor, max_replication_factor):
+        return [ self.copy(replication_factor=r) for r in range(min_replication_factor, max_replication_factor + 1)]
+
+async def precomputation(*, e: Experiment):
+    print("Running experiment:", e)
+
+    num_workers = 2 + e.redundancy_elimination_workers
     num_workers = num_workers - 1 # Write choices services is currently not sending a done signal
 
     args = {
-        "region-selector": region_selector,
-        "replication-factor": replication_factor,
+        "region-selector": e.region_selector,
+        "object-store-selector": e.object_store_selector,
+        "replication-factor": e.replication_factor,
         #"output-file-name": "/dev/null",
-        "batch-size": batch_size,
-        "network-file": f"{base_dir}/network_cost_v2.csv",
-        "object-store-file": f"{base_dir}/storage_pricing.csv",
-        "redundancy-elimination-workers": redundancy_elimination_workers,
+        "batch-size": e.batch_size,
+        "network-file": f"{e.data_dir}/network_cost_v2.csv",
+        "object-store-file": f"{e.data_dir}/storage_pricing.csv",
+        "redundancy-elimination-workers": e.redundancy_elimination_workers,
         #"output_candidates": ""
-        "experiment-name": experiment_name,
+        "experiment-name": e.experiment_dir_full,
         "influx-host": "flaminio.millennium.berkeley.edu",
         "num-workers": num_workers
     }
@@ -107,22 +149,19 @@ async def main(args):
             args + [
                 '--worker-id', f"{i}",
                 '--executor-name', f"candidate_executor_{i}",
-                '-o', f'{experiment_name}/{optimal_policies_name_prefix}_{i}.{output_file_extension}',
-                "--output-candidates-file-name", f"{experiment_name}/{candidate_policies_name_prefix}_{i}.{output_file_extension}"]
+                '-o', os.path.join(e.experiment_dir_full, f'{optimal_policies_name_prefix}_{i}.{output_file_extension}'),
+                "--output-candidates-file-name", os.path.join(e.experiment_dir_full, f"{candidate_policies_name_prefix}_{i}.{output_file_extension}")]
             )
-        } for i in range(redundancy_elimination_workers)
+        } for i in range(e.redundancy_elimination_workers)
     }
-
-    # Create directory for experiment
-    os.makedirs(experiment_name)
 
     deployment = hydro.Deployment()
 
     localhost = deployment.Localhost()
 
     write_choices_service = deployment.HydroflowCrate(
-        src="./skypie_lib",
-        profile=profile,
+        src=e.hydro_dir,
+        profile=e.profile,
         example="write_choices_simple_demux_launch",
         on=localhost,
         display_id="write_choices",
@@ -130,27 +169,29 @@ async def main(args):
     )
 
     logging_service = deployment.HydroflowCrate(
-        src="./skypie_lib",
-        profile=profile,
+        src=e.hydro_dir,
+        profile=e.profile,
         example="logger_launch",
         on=localhost,
         display_id="logger",
         args=args + [
             '--worker-id', "10001",
-            '-o', f"{optimal_policies_name_prefix}.{output_file_extension}",
-            "--output-candidates-file-name", f"{experiment_name}/{candidate_policies_name_prefix}.{output_file_extension}"
+            '-o', os.path.join(e.experiment_dir_full, f'{optimal_policies_name_prefix}.{output_file_extension}'),
+            "--output-candidates-file-name", os.path.join(e.experiment_dir_full, f"{candidate_policies_name_prefix}.{output_file_extension}")
         ]
     )
     
     candidates_service = [s for s in create_scale_up_service(deployment,
-        num_scale_up=redundancy_elimination_workers,
-        profile=profile,
-        src="./skypie_lib",
+        num_scale_up=e.redundancy_elimination_workers,
+        profile=e.profile,
+        src=e.hydro_dir,
         example="candidate_and_reduce_launch",
         on=localhost,
         display_id="candidate_reduce",
         kwargs_instances=kwargs_instances
         )]
+    
+    python_receiver_service = deployment.CustomService(localhost, external_ports=[])
 
     ## Connect named ports of services
     # Sender service's "output" port to receiver service's "input" port
@@ -164,13 +205,83 @@ async def main(args):
     # Send timing information of the write choices service to the logging service
     write_choices_service.ports.time_output.send_to(logging_service.ports.time_input.merge())
 
+    python_receiver_port = python_receiver_service.client_port()
+    logging_service.ports.done_output.send_to(python_receiver_port)
+    
     # Deploy and start, blocking until deployment is complete
     await deployment.deploy()
 
+    # Create directory for experiment
+    os.makedirs(e.experiment_dir_full, exist_ok=True)
+    
+    # Write experiment parameters to json file
+    with open(os.path.join(e.experiment_dir_full, "experiment.json"), "w") as f:
+        json.dump(e.__dict__, f, indent=4)
+
+    # Direct stdout of this python script to a file
+    log_file = os.path.join(e.experiment_dir_full, "experiment.log")
+    tee = Tee(open(log_file, "w"))
+    
     await deployment.start()
 
-    # Wait for user input to terminate
-    input("Press enter to terminate...")
+    receiver_connection = await (await python_receiver_port.server_port()).into_source()
+
+    # Wait for the logging service to finish
+    async for raw_msg in receiver_connection:
+        msg = bytes(raw_msg)
+        print(msg, raw_msg)
+        if raw_msg == [42]:
+            break
+
+    # Terminate deployment
+    print("DONE!")
+
+    tee.close()
+
+def get_args(args):
+    parser = argparse.ArgumentParser(description="Run the SkyPie precomputer.")
+    parser.add_argument("--replication-factor", type=int, required=True, help="The replication factor to use for the precomputation.")
+    parser.add_argument("--redundancy-elimination-workers", type=int, required=True, help="The number of workers to use for the redundancy elimination.")
+    parser.add_argument("--region-selector", type=str, required=True, help="The region selector to use for the precomputation.")
+    parser.add_argument("--experiment-name", type=str, required=True, help="The name of the experiment.")
+    parser.add_argument("--object-store-selector", type=str, help="The region selector to use for the precomputation.")
+    parser.add_argument("--batch-size", type=int, help="The batch size to use for the precomputation.")
+    parser.add_argument("--hydro-dir", type=str, help="The directory of the SkyPie precomputer hydroflow project.")
+    parser.add_argument("--data-dir", type=str, help="The data directory of the supplemental files.")
+    parser.add_argument("--experiment-dir", type=str, help="The base directory to store the experiment results.")
+    parser.add_argument("--profile", type=str, help="The compiler profile to use, e.g., dev or release.")
+
+    return parser.parse_args(args=args)
+
+async def main(argv):
+
+    min_replication_factor = 1
+    max_replication_factor = 5
+    fixed_args = dict(
+        experiment_dir = os.path.join(os.getcwd(), "results", "precomputation_scaling"),
+        batch_size = 400,
+        redundancy_elimination_workers = 60,
+        replication_factor = 0,
+        #profile= "dev"
+    )
+
+    if len(argv) > 0:
+        experiments = [Experiment(**get_args(argv).__dict__)]
+    else:
+        #scaling = Experiment(region_selector="aws-eu", object_store_selector="General Purpose", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor) + \
+            #Experiment(region_selector="aws-eu", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor) + \
+            #Experiment(region_selector="aws", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor) + \
+            #Experiment(region_selector="azure", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor)
+        scaling = Experiment(region_selector="azure|aws", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor)
+
+        experiments = scaling
+
+    print("Running experiments:", len(experiments))
+    for experiment in experiments:
+        await precomputation(e=experiment)
+        
+        # Cool down
+        await asyncio.sleep(5)
 
 if __name__ == "__main__":
     import sys
