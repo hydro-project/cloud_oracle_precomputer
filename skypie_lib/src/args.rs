@@ -3,9 +3,13 @@ use std::path::PathBuf;
 
 #[derive(Debug, Parser)]
 pub struct Args {
-    /// Selector for regions
+    /// Regex selector for regions
     #[clap(short, long)]
     pub region_selector: String,
+
+    /// Regex selector for regions
+    #[clap(long)]
+    pub object_store_selector: String,
 
     /// Replication factor
     #[clap(long)]

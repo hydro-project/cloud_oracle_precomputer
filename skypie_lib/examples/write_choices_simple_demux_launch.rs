@@ -51,6 +51,7 @@ async fn main() {
         &args.network_file,
         &args.object_store_file,
         &args.region_selector,
+        &args.object_store_selector
     );
 
     // Get ports

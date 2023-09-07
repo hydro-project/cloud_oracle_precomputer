@@ -3,7 +3,8 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use clap::Parser;
-use hydroflow::util::cli::{ConnectedDirect, ConnectedSource};
+use hydroflow::bytes::Bytes;
+use hydroflow::util::cli::{ConnectedDirect, ConnectedSource, ConnectedSink};
 use hydroflow::util::deserialize_from_bytes;
 use hydroflow::hydroflow_syntax;
 use itertools::Itertools;
@@ -22,6 +23,7 @@ async fn main() {
         &args.network_file,
         &args.object_store_file,
         &args.region_selector,
+        &args.object_store_selector
     );
 
     let time_input_recv = ports
@@ -37,6 +39,12 @@ async fn main() {
         .connect::<ConnectedDirect>() 
         .await
         .into_source();
+
+    let done_sink = ports
+        .port("done_output")
+        .connect::<ConnectedDirect>() 
+        .await
+        .into_sink();
 
     type Input = (SkyPieLogEntryType, std::time::Duration);
 
@@ -105,17 +113,16 @@ async fn main() {
             -> map(|x| -> usize {deserialize_from_bytes(x.unwrap()).unwrap()})
             // Remember all finished workers
             -> persist()
+            -> unique() -> sort()
             // Collect all finished workers
             -> fold(Vec::new(), |acc: &mut Vec<_>, x| {acc.push(x);})
             -> inspect(|x| {
                 println!("Workers done: {} ({:?})", x.len(), x);
             })
-            -> map(|x| x.len() == (args.num_workers-1))
-            -> for_each(|x| {
-                if x {
-                    println!("All workers done!");
-                }
-            });
+            -> filter(|x| x.len() >= (args.num_workers-1))
+            -> map(|_| -> Bytes {vec![42 as u8].into()})
+            -> inspect(|_| {println!("All workers done!");})
+            -> dest_sink(done_sink);
 
         input = source_stream(time_input_recv) -> map(|x| -> Input {deserialize_from_bytes(x.unwrap()).unwrap()});
         input -> fold::<'static>(Default::default(), |map: &mut HashMap::<SkyPieLogEntryType, Duration>, (entry_type, duration)|{

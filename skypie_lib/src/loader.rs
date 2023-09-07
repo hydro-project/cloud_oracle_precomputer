@@ -14,7 +14,7 @@ pub struct Loader {
 }
 
 impl Loader {
-    pub fn new(network_file_path: &PathBuf, object_store_file_path: &PathBuf, region_pattern: &str) -> Loader {
+    pub fn new(network_file_path: &PathBuf, object_store_file_path: &PathBuf, region_pattern: &str, object_store_pattern: &str) -> Loader {
 
         let (network_egress, regions, region_names) = Loader::load_network(network_file_path, region_pattern);
         
@@ -41,7 +41,7 @@ impl Loader {
         assert!(!regions.is_empty());
 
         // Load object stores
-        let object_stores = Loader::load_object_stores(object_store_file_path, region_pattern, &network_egress, &network_ingress, &region_names);
+        let object_stores = Loader::load_object_stores(object_store_file_path, region_pattern, &network_egress, &network_ingress, &region_names, object_store_pattern);
 
         
         // Load application regions
@@ -156,8 +156,9 @@ impl Loader {
         return (network_costs, regions, region_names);
     }
 
-    fn load_object_stores(object_store_file_path: &PathBuf, region_pattern: &str, egress_costs: &NetworkCostMaps, ingress_costs: &NetworkCostMaps, region_names: &HashMap<String, Region>) -> Vec<ObjectStore> {
-        let re = Regex::new(region_pattern).unwrap();
+    fn load_object_stores(object_store_file_path: &PathBuf, region_pattern: &str, egress_costs: &NetworkCostMaps, ingress_costs: &NetworkCostMaps, region_names: &HashMap<String, Region>, object_store_pattern: &str) -> Vec<ObjectStore> {
+        let region_regex = Regex::new(region_pattern).unwrap();
+        let object_store_regex = Regex::new(object_store_pattern).unwrap();
 
         let rdr = csv::Reader::from_path(object_store_file_path).unwrap();
         let iter: csv::DeserializeRecordsIntoIter<std::fs::File, ObjectStoreStructRaw> =
@@ -165,7 +166,7 @@ impl Loader {
 
         let object_stores: Vec<ObjectStore> = iter
             .map(|x| x.unwrap().into())
-            .filter(|r: &ObjectStoreStruct| re.is_match(&r.region.name))
+            .filter(|r: &ObjectStoreStruct| region_regex.is_match(&r.region.name) && object_store_regex.is_match(&r.name))
             .map(|o|ObjectStore::new(o))
             // Combine object stores with identical names
             .fold(HashMap::new(), |mut agg, mut object_store| {

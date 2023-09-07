@@ -15,7 +15,7 @@ async fn main() {
     // Load the input
     let args = Args::parse();
 
-    let loader = Loader::new(&args.network_file, &args.object_store_file, &args.region_selector);
+    let loader = Loader::new(&args.network_file, &args.object_store_file, &args.region_selector, &args.object_store_selector);
     
     // Get ports
     let output_send = ports
