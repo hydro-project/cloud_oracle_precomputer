@@ -11,6 +11,7 @@ mod messages {
     use prost::Message;
     #[cfg(feature = "python-module")]
     use pyo3::prelude::*;
+    use rayon::prelude::*;
     use std::{collections::HashMap, path::Path};
 
     include!(concat!(env!("OUT_DIR"), "/skypie.rs"));
@@ -145,6 +146,13 @@ mod messages {
         decisions
     }
 
+    pub fn load_decisions_parallel(paths: Vec<&Path>, threads: usize) -> Vec<Decision> {
+
+        paths.chunks(paths.len() / threads).into_iter().par_bridge()
+            .map(|chunk|load_decisions(chunk.to_vec()))
+            .reduce(|| vec![], |mut acc: Vec<Decision>, next| {acc.extend(next); acc})
+}
+
     pub fn load_wrapper(path: &Path) -> Wrapper {
         type M = Wrapper;
 
@@ -157,7 +165,7 @@ mod messages {
 #[cfg(feature = "python-module")]
 mod python {
     use crate::messages::{
-        load_decisions, load_wrapper, Assignment, Decision, OptimalByOptimizer, Run, Scheme,
+        load_decisions, load_decisions_parallel, load_wrapper, Assignment, Decision, OptimalByOptimizer, Run, Scheme,
         Setting, TierAdvise, Wrapper,
     };
     use pyo3::prelude::*;
@@ -252,6 +260,13 @@ mod python {
         Ok(load_decisions(paths))
     }
 
+    #[pyfunction(name = "load_decisions_parallel")]
+    #[pyo3(text_signature = "(paths: List[String], threads: int, /)")]
+    fn load_decisions_parallel_py(paths: Vec<&str>, threads: usize) -> PyResult<Vec<Decision>> {
+        let paths = paths.into_iter().map(|p| Path::new(p)).collect();
+        Ok(load_decisions_parallel(paths, threads))
+    }
+
     #[pyfunction(name = "load_wrapper")]
     #[pyo3(text_signature = "(path: String, /)")]
     fn load_wrapper_py(path: &str) -> PyResult<Wrapper> {
@@ -262,6 +277,7 @@ mod python {
     #[pymodule]
     fn skypie_proto_messages(_py: Python, m: &PyModule) -> PyResult<()> {
         m.add_function(wrap_pyfunction!(load_decisions_py, m)?)?;
+        m.add_function(wrap_pyfunction!(load_decisions_parallel_py, m)?)?;
         m.add_function(wrap_pyfunction!(load_wrapper_py, m)?)?;
         m.add_class::<Assignment>()?;
         m.add_class::<Scheme>()?;
@@ -276,6 +292,6 @@ mod python {
 }
 
 pub use messages::{
-    load_decisions, load_wrapper, Assignment, Decision, OptimalByOptimizer, Run, Scheme, Setting,
+    load_decisions, load_decisions_parallel, load_wrapper, Assignment, Decision, OptimalByOptimizer, Run, Scheme, Setting,
     TierAdvise, Wrapper,
 };
