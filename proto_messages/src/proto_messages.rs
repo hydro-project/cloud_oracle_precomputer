@@ -134,24 +134,66 @@ mod messages {
         }
     }
 
-    pub fn load_decisions(paths: Vec<&Path>) -> Vec<Decision> {
+    impl Assignment {
+        pub fn compact(mut self, is_first: bool) -> Assignment {
+            self.object_store = String::new();
+            if !is_first {
+                self.app = String::new();
+            }
+            self
+        }
+    }
+
+    impl Scheme {
+        pub fn compact(mut self, is_first: bool) -> Scheme {
+            self.object_stores = Vec::with_capacity(0);
+            self.app_assignments = self.app_assignments.into_iter().map(|x| x.compact(is_first)).collect();
+            self
+        }
+    }
+
+    impl Decision {
+        pub fn compact(mut self, is_first: bool) -> Decision {
+            if let Some(replication_scheme) = self.replication_scheme {
+                self.replication_scheme = Some(replication_scheme.compact(is_first));
+            }
+
+            self
+        }
+    }
+
+    pub fn load_decisions(paths: Vec<&Path>, compact: bool) -> Vec<Decision> {
         type M = Decision;
 
+        // Treat first message compaction differently
+        let mut is_first = true;
         let mut decisions = Vec::new();
         for path in paths {
             let message_iter = ProtobufFileReader::new(path).unwrap().into_iter_all::<M>();
 
-            decisions.extend(message_iter);
+            if compact {
+                // Replace non-essential contend with empty values
+                let compact_message_iter = message_iter.map(|x: M| {
+                    let res = x.compact(is_first);
+                    is_first = false;
+                    res
+                });
+                decisions.extend(compact_message_iter);
+
+            } else {
+                decisions.extend(message_iter);
+            }
         }
+
         decisions
     }
 
-    pub fn load_decisions_parallel(paths: Vec<&Path>, threads: usize) -> Vec<Decision> {
+    pub fn load_decisions_parallel(paths: Vec<&Path>, threads: usize, compact: bool) -> Vec<Decision> {
 
         paths.chunks(paths.len() / threads).into_iter().par_bridge()
-            .map(|chunk|load_decisions(chunk.to_vec()))
+            .map(|chunk|load_decisions(chunk.to_vec(), compact))
             .reduce(|| vec![], |mut acc: Vec<Decision>, next| {acc.extend(next); acc})
-}
+    }
 
     pub fn load_wrapper(path: &Path) -> Wrapper {
         type M = Wrapper;
@@ -254,17 +296,17 @@ mod python {
     }
 
     #[pyfunction(name = "load_decisions")]
-    #[pyo3(text_signature = "(paths: List[String], /)")]
-    fn load_decisions_py(paths: Vec<&str>) -> PyResult<Vec<Decision>> {
+    #[pyo3(text_signature = "(paths: List[String], compact: bool = False, /)")]
+    fn load_decisions_py(paths: Vec<&str>, compact: bool) -> PyResult<Vec<Decision>> {
         let paths = paths.into_iter().map(|p| Path::new(p)).collect();
-        Ok(load_decisions(paths))
+        Ok(load_decisions(paths, compact))
     }
 
     #[pyfunction(name = "load_decisions_parallel")]
-    #[pyo3(text_signature = "(paths: List[String], threads: int, /)")]
-    fn load_decisions_parallel_py(paths: Vec<&str>, threads: usize) -> PyResult<Vec<Decision>> {
+    #[pyo3(text_signature = "(paths: List[String], threads: int, compact: bool = False, /)")]
+    fn load_decisions_parallel_py(paths: Vec<&str>, threads: usize, compact: bool) -> PyResult<Vec<Decision>> {
         let paths = paths.into_iter().map(|p| Path::new(p)).collect();
-        Ok(load_decisions_parallel(paths, threads))
+        Ok(load_decisions_parallel(paths, threads, compact))
     }
 
     #[pyfunction(name = "load_wrapper")]
