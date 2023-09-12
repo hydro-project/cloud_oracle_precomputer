@@ -89,7 +89,7 @@ class Experiment:
     data_dir: str = field(default_factory=os.getcwd)
     profile: str = "release"
     object_store_selector: str = ""
-    name: "str|None" = None
+    experiment_name: "str|None" = None
     experiment_dir_full: str = "" # This is set in __post_init__
 
     def __post_init__(self):
@@ -103,7 +103,7 @@ class Experiment:
         friendly_object_store = self.object_store_selector.translate(translation_table)
 
         # Create the name of the experiment
-        paths = ([self.name] if self.name is not None else []) + \
+        paths = ([self.experiment_name] if self.experiment_name is not None else []) + \
             [friendly_region, friendly_object_store, str(self.replication_factor), str(self.redundancy_elimination_workers)]
         self.experiment_dir_full = os.path.join(self.experiment_dir, *paths)
 
@@ -266,7 +266,8 @@ async def main(argv):
     )
 
     if len(argv) > 0:
-        experiments = [Experiment(**get_args(argv).__dict__)]
+        exp_args = {k:v for k,v in get_args(argv).__dict__.items() if v}
+        experiments = [Experiment(**exp_args)]
     else:
         #scaling = Experiment(region_selector="aws-eu", object_store_selector="General Purpose", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor) + \
             #Experiment(region_selector="aws-eu", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor) + \
