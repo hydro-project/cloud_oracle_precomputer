@@ -1,7 +1,7 @@
 from skypie import *
 import numpy as np
 
-def load_args(*, dsize=1000, useClarkson_=False, optimizerThreads=1, verbose_=0, optimizer="InteriorPoint"):
+def load_args(*, dsize=1000, use_clarkson=False, optimizerThreads=1, verbose_=0, optimizer="InteriorPoint"):
     global algoArgs, optimizerType, useClarkson, verbose
 
     # Ignore args: torchDeviceRayShooting: str, normalize: bool, optimizerThreads: int, nonnegative: bool, optimizerType: str
@@ -12,7 +12,7 @@ def load_args(*, dsize=1000, useClarkson_=False, optimizerThreads=1, verbose_=0,
     #optimizer = "InteriorPoint"
 
     args = {
-        "useClarkson": [useClarkson_],
+        "useClarkson": ["True" if  use_clarkson else "False"],
         "useGPU": [False],
         "torchDeviceRayShooting": "cpu",
         #"device_query": "cpu",
@@ -51,6 +51,8 @@ def load_args(*, dsize=1000, useClarkson_=False, optimizerThreads=1, verbose_=0,
     del algoArgs["optimizerType"]
     verbose = algoArgs.get("verbose", 0)
 
+    assert optimizerType.useClarkson == use_clarkson, f"Optimizer {optimizer} useClarkson {useClarkson} != {use_clarkson}"
+    assert useClarkson == use_clarkson, f"Optimizer {optimizer} useClarkson {useClarkson} != {use_clarkson}"
 
 """
 let optimizer_type = r#"
@@ -136,6 +138,6 @@ def redundancy_elimination_test():
     assert nonredundant == expected, f"Expected {expected}, got {nonredundant}"
 
 if __name__ == "__main__":
-    load_args()
+    load_args(use_clarkson=False)
     redundancy_elimination_test()
     get_optimizer_json()

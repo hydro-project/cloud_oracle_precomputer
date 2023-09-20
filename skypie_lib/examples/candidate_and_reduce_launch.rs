@@ -43,7 +43,7 @@ async fn main() {
 
     let object_store_id_map = loader.object_stores.iter().map(|x| (x.id.clone(), x.clone())).collect::<std::collections::HashMap<_,_>>();
 
-    let flow = candidate_policies_reduce_hydroflow(regions, input_recv, args.batch_size, args.experiment_name, output_candidates_file_name, output_file_name, object_store_id_map, time_sink, done_sink, args.worker_id);
+    let flow = candidate_policies_reduce_hydroflow(regions, input_recv, args.batch_size, args.experiment_name, output_candidates_file_name, output_file_name, object_store_id_map, time_sink, done_sink, args.worker_id, args.optimizer, args.use_clarkson);
 
     println!("Launching candidate and reduce");
     hydroflow::util::cli::launch_flow(flow).await;

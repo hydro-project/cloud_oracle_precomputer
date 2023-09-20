@@ -30,6 +30,18 @@ impl Decision {
     pub fn plane_iter<'a>(&'a self) -> DecisionCostIter<'a> {
         DecisionCostIter::new(self, true)
     }
+
+    pub fn get_no_dimensions(no_apps: usize) -> usize {
+        let read_choice = vec![ApplicationRegion::default();no_apps];
+        let write_choice = WriteChoice::default();
+
+        let decision = Decision {
+            write_choice,
+            read_choice: ReadChoice::from_iter(read_choice.into_iter().map(|r| (r, ObjectStore::default()))),
+        };
+
+        return decision.cost_iter().len();
+    }
 }
 
 impl Tombstone for Decision {

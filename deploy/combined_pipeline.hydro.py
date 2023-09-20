@@ -91,6 +91,8 @@ class Experiment:
     object_store_selector: str = ""
     name: "str|None" = None
     experiment_dir_full: str = "" # This is set in __post_init__
+    optimizer: str = "InteriorPoint",
+    use_clarkson: bool = False
 
     def __post_init__(self):
         
@@ -98,13 +100,19 @@ class Experiment:
         unfriendly_chars = ["|", "*", " ", "(", ")", "[", "]", "{", "}", ":", ";", ",", ".", "<", ">", "/", "\\", "?", "'", "\"", "\n", "\t", "\r", "\v", "\f"]
         translation_table = str.maketrans({c: "-" for c in unfriendly_chars})
 
+        clarkson = "use_clarkson" if self.use_clarkson else "no_clarkson"
+
         # Use the translation table to replace all unfriendly characters
         friendly_region = self.region_selector.translate(translation_table)
         friendly_object_store = self.object_store_selector.translate(translation_table)
+        if len(friendly_object_store) > 0:
+            friendly_region_and_object_store = f"{friendly_region}-{friendly_object_store}"
+        else:
+            friendly_region_and_object_store = friendly_region
 
         # Create the name of the experiment
         paths = ([self.name] if self.name is not None else []) + \
-            [friendly_region, friendly_object_store, str(self.replication_factor), str(self.redundancy_elimination_workers)]
+            [friendly_region_and_object_store, str(self.replication_factor), str(self.redundancy_elimination_workers), str(self.batch_size), str(self.optimizer), clarkson]
         self.experiment_dir_full = os.path.join(self.experiment_dir, *paths)
 
     def copy(self, **kwargs):
@@ -133,11 +141,16 @@ async def precomputation(*, e: Experiment):
         #"output_candidates": ""
         "experiment-name": e.experiment_dir_full,
         "influx-host": "flaminio.millennium.berkeley.edu",
-        "num-workers": num_workers
+        "num-workers": num_workers,
+        "optimizer": e.optimizer,
     }
+
 
     # Convert args to a list of strings with --key=value format
     args = [f"--{key}={value}" for key, value in args.items()]
+    
+    if e.use_clarkson:
+        args.append("--use-clarkson")
 
     # Worker specific args
     optimal_policies_name_prefix = "optimal"
@@ -255,19 +268,18 @@ def get_args(args):
 
 async def main(argv):
 
-    min_replication_factor = 1
-    max_replication_factor = 5
-    fixed_args = dict(
-        experiment_dir = os.path.join(os.getcwd(), "results", "precomputation_scaling"),
-        batch_size = 400,
-        redundancy_elimination_workers = 60,
-        replication_factor = 0,
-        #profile= "dev"
-    )
-
     if len(argv) > 0:
         experiments = [Experiment(**get_args(argv).__dict__)]
     else:
+        min_replication_factor = 1
+        max_replication_factor = 5
+        fixed_args = dict(
+            experiment_dir = os.path.join(os.getcwd(), "results", "precomputation_scaling"),
+            batch_size = 400,
+            redundancy_elimination_workers = 60,
+            replication_factor = 0,
+            #profile= "dev"
+        )
         #scaling = Experiment(region_selector="aws-eu", object_store_selector="General Purpose", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor) + \
             #Experiment(region_selector="aws-eu", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor) + \
             #Experiment(region_selector="aws", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor) + \
@@ -275,6 +287,25 @@ async def main(argv):
         scaling = Experiment(region_selector="azure|aws", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor)
 
         experiments = scaling
+
+    # Accuracy drill down with small problem settings
+    fixed_args = dict(
+        experiment_dir = os.path.join(os.getcwd(), "results", "batch_size_scaling"),
+        #redundancy_elimination_workers = 30,
+        redundancy_elimination_workers = 60,
+        replication_factor=0,
+        #profile="dev"
+    )
+    batch_sizes = [200, 500, 1000]
+    use_clarkson = [False]
+    object_selectors = [""]
+    optimizers = ["PrimalSimplex"]
+    #object_selectors = ["General Purpose", ""]
+    #optimizers = ["PrimalSimplex", "InteriorPoint"]
+    batch_size_scaling = [Experiment(region_selector="aws", object_store_selector=o_s, **fixed_args, batch_size=b, optimizer=opt, use_clarkson=c).as_replication_factors(5, 5) for b in batch_sizes for o_s in object_selectors for opt in optimizers for c in use_clarkson]
+
+    # flatten list of experiments
+    experiments = [e for sublist in batch_size_scaling for e in sublist]
 
     print("Running experiments:", len(experiments))
     for experiment in experiments:

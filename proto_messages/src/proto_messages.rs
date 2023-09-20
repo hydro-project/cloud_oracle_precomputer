@@ -146,12 +146,32 @@ mod messages {
         decisions
     }
 
+    pub fn count_decisions(paths: Vec<&Path>) -> usize {
+        type M = Decision;
+
+        let decisions = paths.into_iter().map(|path| {
+            let message_iter = ProtobufFileReader::new(path).unwrap().into_iter_all::<M>();
+            message_iter.count()
+        }).sum();
+
+        decisions
+    }
+
     pub fn load_decisions_parallel(paths: Vec<&Path>, threads: usize) -> Vec<Decision> {
 
-        paths.chunks(paths.len() / threads).into_iter().par_bridge()
+        let chunk_size = std::cmp::max(1, paths.len() / threads);
+        paths.chunks(chunk_size).into_iter().par_bridge()
             .map(|chunk|load_decisions(chunk.to_vec()))
             .reduce(|| vec![], |mut acc: Vec<Decision>, next| {acc.extend(next); acc})
-}
+    }
+
+    pub fn count_decisions_parallel(paths: Vec<&Path>, threads: usize) -> usize {
+
+        let chunk_size = std::cmp::max(1, paths.len() / threads);
+        paths.chunks(chunk_size).into_iter().par_bridge()
+            .map(|chunk|count_decisions(chunk.to_vec()))
+            .sum()
+    }
 
     pub fn load_wrapper(path: &Path) -> Wrapper {
         type M = Wrapper;
@@ -165,7 +185,9 @@ mod messages {
 #[cfg(feature = "python-module")]
 mod python {
     use crate::messages::{
-        load_decisions, load_decisions_parallel, load_wrapper, Assignment, Decision, OptimalByOptimizer, Run, Scheme,
+        load_decisions, load_decisions_parallel, load_wrapper,
+        count_decisions, count_decisions_parallel,
+        Assignment, Decision, OptimalByOptimizer, Run, Scheme,
         Setting, TierAdvise, Wrapper,
     };
     use pyo3::prelude::*;
@@ -266,6 +288,20 @@ mod python {
         let paths = paths.into_iter().map(|p| Path::new(p)).collect();
         Ok(load_decisions_parallel(paths, threads))
     }
+    
+    #[pyfunction(name = "count_decisions")]
+    #[pyo3(text_signature = "(paths: List[String], /)")]
+    fn count_decisions_py(paths: Vec<&str>) -> PyResult<usize> {
+        let paths = paths.into_iter().map(|p| Path::new(p)).collect();
+        Ok(count_decisions(paths))
+    }
+
+    #[pyfunction(name = "count_decisions_parallel")]
+    #[pyo3(text_signature = "(paths: List[String], threads: int, /)")]
+    fn count_decisions_parallel_py(paths: Vec<&str>, threads: usize) -> PyResult<usize> {
+        let paths = paths.into_iter().map(|p| Path::new(p)).collect();
+        Ok(count_decisions_parallel(paths, threads))
+    }
 
     #[pyfunction(name = "load_wrapper")]
     #[pyo3(text_signature = "(path: String, /)")]
@@ -278,6 +314,8 @@ mod python {
     fn skypie_proto_messages(_py: Python, m: &PyModule) -> PyResult<()> {
         m.add_function(wrap_pyfunction!(load_decisions_py, m)?)?;
         m.add_function(wrap_pyfunction!(load_decisions_parallel_py, m)?)?;
+        m.add_function(wrap_pyfunction!(count_decisions_py, m)?)?;
+        m.add_function(wrap_pyfunction!(count_decisions_parallel_py, m)?)?;
         m.add_function(wrap_pyfunction!(load_wrapper_py, m)?)?;
         m.add_class::<Assignment>()?;
         m.add_class::<Scheme>()?;
@@ -292,6 +330,6 @@ mod python {
 }
 
 pub use messages::{
-    load_decisions, load_decisions_parallel, load_wrapper, Assignment, Decision, OptimalByOptimizer, Run, Scheme, Setting,
+    load_decisions, load_decisions_parallel, load_wrapper, count_decisions, count_decisions_parallel, Assignment, Decision, OptimalByOptimizer, Run, Scheme, Setting,
     TierAdvise, Wrapper,
 };

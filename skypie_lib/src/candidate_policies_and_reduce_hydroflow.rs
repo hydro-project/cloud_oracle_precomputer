@@ -23,7 +23,7 @@ pub type OutputType = Decision;
 pub type InputConnection = std::pin::Pin<Box<dyn Stream<Item = Result<BytesMut, std::io::Error>> + Send + Sync>>;
 pub type OutputConnection = std::pin::Pin<Box<dyn Sink<Bytes, Error = std::io::Error> + Send + Sync>>;
 
-pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<ApplicationRegion>, input: InputConnection, batch_size: usize, _experiment_name: String, output_candidates_file_name: String, output_file_name: String, object_store_id_map: HashMap<u16, ObjectStore>, time_sink: OutputConnection, done_sink: OutputConnection, worker_id: usize) -> hydroflow::scheduled::graph::Hydroflow
+pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<ApplicationRegion>, input: InputConnection, batch_size: usize, _experiment_name: String, output_candidates_file_name: String, output_file_name: String, object_store_id_map: HashMap<u16, ObjectStore>, time_sink: OutputConnection, done_sink: OutputConnection, worker_id: usize, optimizer: Option<String>, use_clarkson: bool) -> hydroflow::scheduled::graph::Hydroflow
 {
     {
         // Validate application regions
@@ -42,6 +42,8 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
     
     }
 
+    let no_dimensions = if use_clarkson {Decision::get_no_dimensions(regions.len())} else {0};
+
     let mut input_monitor = MonitorNOOP::new(1000); //MonitorNOOP::new(0); //MonitorMovingAverage::new(1000);
     let input_log_interval = 1;
     //let mut output_monitor = MonitorMovingAverage::new(1000); //MonitorNOOP::new(0);
@@ -56,6 +58,10 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
         // Load arguments via python function "load_args"
         let kwargs = PyDict::new(py);
         kwargs.set_item("dsize", batch_size).unwrap();
+        kwargs.set_item("use_clarkson", use_clarkson).unwrap();
+        if let Some(optimizer) = optimizer {
+            kwargs.set_item("optimizer", optimizer).unwrap();
+        }
         let res = module.call_method("load_args", (), Some(kwargs));
         if let Err(e) = res {
             println!("Error in load_args: {}", e);
@@ -232,26 +238,35 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
             // Start time of computing optimal decisions
             let start = std::time::Instant::now();
 
-            // Convert batch of decisions to numpy array
-            let py_array = Decision::to_inequalities_numpy(&decisions);
+            // Clarkson's algorithm cannot handle the case of fewer decisions than dimensions
+            let optimal = if decisions.len() < no_dimensions {
+                decisions
+            }
+            else {
 
-            let optimal = Python::with_gil(|py| {
-                type T = Vec<usize>;
+                // Convert batch of decisions to numpy array
+                let py_array = Decision::to_inequalities_numpy(&decisions);
     
-                // Computing optimal decisions by row IDs in vector
-                let py_res = fun.call(py, (py_array,), None).unwrap();
-                let res: T = py_res.extract(py).unwrap();
-
-                //println!("Optimal decisions: ({}) {:?}", res.len(), res);
-                
-                // Extract optimal decisions by ids in res
-                let mut optimal = Vec::with_capacity(res.len());
-                for id in res {
-                    optimal.push(decisions[id].clone());
-                }
+                let optimal = Python::with_gil(|py| {
+                    type T = Vec<usize>;
+        
+                    // Computing optimal decisions by row IDs in vector
+                    let py_res = fun.call(py, (py_array,), None).unwrap();
+                    let res: T = py_res.extract(py).unwrap();
+    
+                    //println!("Optimal decisions: ({}) {:?}", res.len(), res);
+                    
+                    // Extract optimal decisions by ids in res
+                    let mut optimal = Vec::with_capacity(res.len());
+                    for id in res {
+                        optimal.push(decisions[id].clone());
+                    }
+    
+                    optimal
+                });
 
                 optimal
-            });
+            };
 
             // End time of computing optimal decisions
             let end = std::time::Instant::now();
