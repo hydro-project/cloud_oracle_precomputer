@@ -91,3 +91,5 @@ def decision_stats_to_json(*, stats_dir: str, scenario_path: str="tier_advise/re
 #stats_dir = "/home/vscode/sky-pie-precomputer/results/batch_size_scaling"
 #decision_stats_to_json(stats_dir=stats_dir)
 decision_stats_to_json(stats_dir="/home/eecs/tbang/git/sky-pie-precomputer/results/cpu_scaling", threads=20)
+decision_stats_to_json(stats_dir="/home/vscode/sky-pie-precomputer/results/precomputation_scaling", threads=40)
+#decision_stats_to_json(stats_dir="/home/vscode/sky-pie-precomputer/results/precomputation_scaling/aws/3/60", threads=40)
