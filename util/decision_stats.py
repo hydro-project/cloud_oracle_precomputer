@@ -1,6 +1,7 @@
 import skypie_proto_messages as m
 import os
 import pandas as pd
+import json
 
 def get_key(data, key: str):
     if key.startswith("relative"):
@@ -27,19 +28,30 @@ def load_scenario(*, stats_file: str, scenario_path: str):
     
     return scenario
 
-def decision_stats(*, stats_file: str, scenario_path: str, threads: int=10):
+def decision_stats(*, stats_file: str, scenario_path: str, threads: int=10, skip_num_decisions: bool=False, experiment_file: str="experiment.json"):
     # Load the scenario
     scenario = load_scenario(stats_file=stats_file, scenario_path=scenario_path)
 
-    # Cound the number of candidate decisions
+    optimizer_name = list(scenario.optimal_partitions_by_optimizer.keys())[0]
     path = os.path.dirname(stats_file)
-    files = [os.path.join(path, f) for f in scenario.candidate_partitions]
-    no_candidates = m.count_decisions_parallel([f for f in files if os.path.isfile(f)], threads)
+    
+    # Cound the number of candidate decisions
+    no_candidates = 0
+    if not skip_num_decisions:
+        files = [os.path.join(path, f) for f in scenario.candidate_partitions]
+        no_candidates = m.count_decisions_parallel([f for f in files if os.path.isfile(f)], threads)
 
     # Count the number of optimal decisions
-    optimizer_name = list(scenario.optimal_partitions_by_optimizer.keys())[0]
-    optimal_partition_files = scenario.optimal_partitions_by_optimizer[optimizer_name].optimal_partitions
-    no_optimal_partitions = m.count_decisions_parallel([os.path.join(path, f) for f in optimal_partition_files], threads)
+    no_optimal_partitions = 0
+    if not skip_num_decisions:
+        optimal_partition_files = scenario.optimal_partitions_by_optimizer[optimizer_name].optimal_partitions
+        no_optimal_partitions = m.count_decisions_parallel([os.path.join(path, f) for f in optimal_partition_files], threads)
+
+    experiment_file = os.path.join(path, experiment_file)
+    experiment_details = {}
+    if os.path.isfile(experiment_file):
+        with open(experiment_file, "r") as f:
+            experiment_details = json.load(f)
 
     res = {
         "Enumerator Time (ns)": scenario.enumerator_time_ns,
@@ -55,9 +67,12 @@ def decision_stats(*, stats_file: str, scenario_path: str, threads: int=10):
         "Optimizer Type": scenario.optimal_partitions_by_optimizer[optimizer_name].optimizer_type,
     }
 
+    if len(experiment_details) > 0:
+        res["Experiment Details"] = experiment_details
+
     return res
 
-def decision_stats_to_json(*, stats_dir: str, scenario_path: str="tier_advise/replication_factor/relative=0/relative=0", threads: int=10, stats_file_name: str="stats.proto.bin"):
+def decision_stats_to_json(*, stats_dir: str, scenario_path: str="tier_advise/replication_factor/relative=0/relative=0", threads: int=10, stats_file_name: str="stats.proto.bin", skip_num_decisions: bool=False):
 
     # Load all stats files in the directory
     stats = []
@@ -65,7 +80,7 @@ def decision_stats_to_json(*, stats_dir: str, scenario_path: str="tier_advise/re
         for filename in filenames:
             if stats_file_name == filename:
                 stats_file = os.path.join(dirpath, filename)
-                stats.append(decision_stats(stats_file=stats_file, scenario_path=scenario_path, threads=threads))
+                stats.append(decision_stats(stats_file=stats_file, scenario_path=scenario_path, threads=threads, skip_num_decisions=skip_num_decisions))
 
     # Convert to dataframe
     df = pd.DataFrame(stats)
@@ -73,5 +88,6 @@ def decision_stats_to_json(*, stats_dir: str, scenario_path: str="tier_advise/re
     print(df)
     df.to_json(f"{stats_dir}/decision_stats.json")
 
-stats_dir = "/home/vscode/sky-pie-precomputer/results/batch_size_scaling"
-decision_stats_to_json(stats_dir=stats_dir)
+#stats_dir = "/home/vscode/sky-pie-precomputer/results/batch_size_scaling"
+#decision_stats_to_json(stats_dir=stats_dir)
+decision_stats_to_json(stats_dir="/home/eecs/tbang/git/sky-pie-precomputer/results/cpu_scaling", threads=20)
