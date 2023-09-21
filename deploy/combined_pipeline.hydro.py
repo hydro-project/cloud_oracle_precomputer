@@ -286,10 +286,9 @@ def build_scaling_experiments():
 
     return scaling
 
-def build_batch_size_scaling_experiments():
+def build_precomputation_batching_experiments(large=False):
     fixed_args = dict(
         experiment_dir = os.path.join(os.getcwd(), "results", "batch_size_scaling"),
-        #redundancy_elimination_workers = 60,
         redundancy_elimination_workers = (18*8-2),
         region_selector="aws|azure",
         object_store_selector="",
@@ -299,6 +298,10 @@ def build_batch_size_scaling_experiments():
         #profile="dev"
     )
     batch_sizes = [200, 500, 1000]
+
+    if large:
+        fixed_args["experiment_dir"] = os.path.join(os.getcwd(), "results", "batch_size_scaling_large")
+        fixed_args["replication_factor"] = 5
 
     return [Experiment(**fixed_args, batch_size=b) for b in batch_sizes]
 
@@ -324,7 +327,8 @@ async def main(argv):
     if len(argv) > 0:
         experiments = [Experiment(**get_args(argv).__dict__)]
     else:
-        #experiments = build_batch_size_scaling_experiments()
+        #experiments = build_precomputation_batching_experiments(large=False)
+        #experiments = build_precomputation_batching_experiments(large=True)
         #experiments = build_cpu_scaling_experiments()
         experiments = build_scaling_experiments()
 
