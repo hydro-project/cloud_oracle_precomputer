@@ -190,7 +190,8 @@ mod messages {
 
     pub fn load_decisions_parallel(paths: Vec<&Path>, threads: usize, compact: bool) -> Vec<Decision> {
 
-        paths.chunks(paths.len() / threads).into_iter().par_bridge()
+        let chunk_size = std::cmp::max(1, (paths.len() / threads) as usize);
+        paths.chunks(chunk_size).into_iter().par_bridge()
             .map(|chunk|load_decisions(chunk.to_vec(), compact))
             .reduce(|| vec![], |mut acc: Vec<Decision>, next| {acc.extend(next); acc})
     }
