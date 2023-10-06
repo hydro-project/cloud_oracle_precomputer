@@ -87,7 +87,7 @@ async fn main() {
         vec![]
     };
 
-    let (optimizer_name, optimizer_type) = skypie_lib::optimizer_stats::get_optimizer_json(args.batch_size);
+    let (optimizer_name, optimizer_type) = skypie_lib::optimizer_stats::get_optimizer_json(args.batch_size, args.optimizer, args.use_clarkson);
 
     let replication_factor = args.replication_factor as u64;
 

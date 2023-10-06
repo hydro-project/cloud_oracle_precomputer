@@ -91,6 +91,8 @@ class Experiment:
     object_store_selector: str = ""
     experiment_name: "str|None" = None
     experiment_dir_full: str = "" # This is set in __post_init__
+    optimizer: str = "InteriorPoint",
+    use_clarkson: bool = False
 
     def __post_init__(self):
         
@@ -98,13 +100,19 @@ class Experiment:
         unfriendly_chars = ["|", "*", " ", "(", ")", "[", "]", "{", "}", ":", ";", ",", ".", "<", ">", "/", "\\", "?", "'", "\"", "\n", "\t", "\r", "\v", "\f"]
         translation_table = str.maketrans({c: "-" for c in unfriendly_chars})
 
+        clarkson = "use_clarkson" if self.use_clarkson else "no_clarkson"
+
         # Use the translation table to replace all unfriendly characters
         friendly_region = self.region_selector.translate(translation_table)
         friendly_object_store = self.object_store_selector.translate(translation_table)
+        if len(friendly_object_store) > 0:
+            friendly_region_and_object_store = f"{friendly_region}-{friendly_object_store}"
+        else:
+            friendly_region_and_object_store = friendly_region
 
         # Create the name of the experiment
         paths = ([self.experiment_name] if self.experiment_name is not None else []) + \
-            [friendly_region, friendly_object_store, str(self.replication_factor), str(self.redundancy_elimination_workers)]
+            [friendly_region_and_object_store, str(self.replication_factor), str(self.redundancy_elimination_workers), str(self.batch_size), str(self.optimizer), clarkson]
         self.experiment_dir_full = os.path.join(self.experiment_dir, *paths)
 
     def copy(self, **kwargs):
@@ -133,11 +141,16 @@ async def precomputation(*, e: Experiment):
         #"output_candidates": ""
         "experiment-name": e.experiment_dir_full,
         "influx-host": "flaminio.millennium.berkeley.edu",
-        "num-workers": num_workers
+        "num-workers": num_workers,
+        "optimizer": e.optimizer,
     }
+
 
     # Convert args to a list of strings with --key=value format
     args = [f"--{key}={value}" for key, value in args.items()]
+    
+    if e.use_clarkson:
+        args.append("--use-clarkson")
 
     # Worker specific args
     optimal_policies_name_prefix = "optimal"
@@ -253,29 +266,72 @@ def get_args(args):
 
     return parser.parse_args(args=args)
 
-async def main(argv):
-
+def build_scaling_experiments():
     min_replication_factor = 1
     max_replication_factor = 5
     fixed_args = dict(
         experiment_dir = os.path.join(os.getcwd(), "results", "precomputation_scaling"),
-        batch_size = 400,
-        redundancy_elimination_workers = 60,
+        batch_size = 200,
+        redundancy_elimination_workers = (18*8-2),
         replication_factor = 0,
+        optimizer="PrimalSimplex",
+        use_clarkson=False,
         #profile= "dev"
     )
+    scaling = Experiment(region_selector="aws-eu", object_store_selector="General Purpose", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor) + \
+        Experiment(region_selector="aws-eu", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor) + \
+        Experiment(region_selector="aws", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor) + \
+        Experiment(region_selector="azure", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor)
+    scaling = Experiment(region_selector="azure|aws", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor)
+
+    return scaling
+
+def build_precomputation_batching_experiments(large=False):
+    fixed_args = dict(
+        experiment_dir = os.path.join(os.getcwd(), "results", "batch_size_scaling"),
+        redundancy_elimination_workers = (18*8-2),
+        region_selector="aws|azure",
+        object_store_selector="",
+        replication_factor=3,
+        optimizer="PrimalSimplex",
+        use_clarkson=False,
+        #profile="dev"
+    )
+    batch_sizes = [200, 500, 1000]
+
+    if large:
+        fixed_args["experiment_dir"] = os.path.join(os.getcwd(), "results", "batch_size_scaling_large")
+        fixed_args["replication_factor"] = 5
+
+    return [Experiment(**fixed_args, batch_size=b) for b in batch_sizes]
+
+def build_cpu_scaling_experiments():
+    fixed_args = dict(
+        experiment_dir = os.path.join(os.getcwd(), "results", "cpu_scaling"),
+        #replication_factor=5,
+        replication_factor=3,
+        batch_size=200,
+        optimizer="PrimalSimplex",
+        use_clarkson=False,
+        region_selector="aws",
+        object_store_selector="",
+        #profile="dev"
+    )
+    worker_numbers = [(18 * i)-2 for i in [8, 4, 2, 1]]
+    batch_size_scaling = [Experiment(redundancy_elimination_workers=w,**fixed_args) for w in worker_numbers]
+
+    return batch_size_scaling
+
+async def main(argv):
 
     if len(argv) > 0:
         exp_args = {k:v for k,v in get_args(argv).__dict__.items() if v}
         experiments = [Experiment(**exp_args)]
     else:
-        #scaling = Experiment(region_selector="aws-eu", object_store_selector="General Purpose", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor) + \
-            #Experiment(region_selector="aws-eu", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor) + \
-            #Experiment(region_selector="aws", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor) + \
-            #Experiment(region_selector="azure", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor)
-        scaling = Experiment(region_selector="azure|aws", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor)
-
-        experiments = scaling
+        #experiments = build_precomputation_batching_experiments(large=False)
+        #experiments = build_precomputation_batching_experiments(large=True)
+        #experiments = build_cpu_scaling_experiments()
+        experiments = build_scaling_experiments()
 
     print("Running experiments:", len(experiments))
     for experiment in experiments:

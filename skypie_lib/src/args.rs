@@ -1,4 +1,4 @@
-use clap::{Parser};
+use clap::Parser;
 use std::path::PathBuf;
 
 #[derive(Debug, Parser)]
@@ -56,4 +56,10 @@ pub struct Args {
 
     #[clap(long)]
     pub num_workers: usize,
+
+    #[clap(long)]
+    pub optimizer: Option<String>,
+
+    #[clap(long)]
+    pub use_clarkson: bool
 }
