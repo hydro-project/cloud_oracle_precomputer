@@ -93,6 +93,7 @@ class Experiment:
     experiment_dir_full: str = "" # This is set in __post_init__
     optimizer: str = "InteriorPoint",
     use_clarkson: bool = False
+    output_candidates: bool = False
 
     def __post_init__(self):
         
@@ -162,11 +163,15 @@ async def precomputation(*, e: Experiment):
             args + [
                 '--worker-id', f"{i}",
                 '--executor-name', f"candidate_executor_{i}",
-                '-o', os.path.join(e.experiment_dir_full, f'{optimal_policies_name_prefix}_{i}.{output_file_extension}'),
-                "--output-candidates-file-name", os.path.join(e.experiment_dir_full, f"{candidate_policies_name_prefix}_{i}.{output_file_extension}")]
+                '-o', os.path.join(e.experiment_dir_full, f'{optimal_policies_name_prefix}_{i}.{output_file_extension}')]
             )
         } for i in range(e.redundancy_elimination_workers)
     }
+
+    if e.output_candidates:
+        #"--output-candidates-file-name", os.path.join(e.experiment_dir_full, f"{candidate_policies_name_prefix}_{i}.{output_file_extension}")
+        for i in range(e.redundancy_elimination_workers):
+            kwargs_instances[i]["args"] += ["--output-candidates-file-name", os.path.join(e.experiment_dir_full, f"{candidate_policies_name_prefix}_{i}.{output_file_extension}")]
 
     deployment = hydro.Deployment()
 
@@ -272,17 +277,48 @@ def build_scaling_experiments():
     fixed_args = dict(
         experiment_dir = os.path.join(os.getcwd(), "results", "precomputation_scaling"),
         batch_size = 200,
-        redundancy_elimination_workers = (18*8-2),
+        redundancy_elimination_workers = 80,
         replication_factor = 0,
         optimizer="PrimalSimplex",
         use_clarkson=False,
         #profile= "dev"
     )
+    
     scaling = Experiment(region_selector="aws-eu", object_store_selector="General Purpose", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor) + \
-        Experiment(region_selector="aws-eu", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor) + \
-        Experiment(region_selector="aws", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor) + \
-        Experiment(region_selector="azure", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor)
-    scaling = Experiment(region_selector="azure|aws", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor)
+        Experiment(region_selector="aws-eu", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor) #+ \
+        #Experiment(region_selector="aws", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor) + \
+        #Experiment(region_selector="azure", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor) + \
+        #Experiment(region_selector="azure|aws", **fixed_args).as_replication_factors(min_replication_factor, min(4, max_replication_factor))
+
+    # Order by replication factor
+    scaling.sort(key=lambda e: e.replication_factor)
+
+    # Also save candidates of small experiments
+    for e in scaling:
+        e.output_candidates = e.region_selector == "aws-eu"
+
+    return scaling
+
+def build_scaling_experiments_lrs():
+    fixed_args = dict(
+        experiment_dir = os.path.join(os.getcwd(), "results", "precomputation_scaling_lrs"),
+        batch_size = 200,
+        redundancy_elimination_workers = 80,
+        #redundancy_elimination_workers = 1,
+        replication_factor = 0,
+        #optimizer="PrimalSimplex",
+        optimizer="lrs",
+        use_clarkson=False,
+        #profile= "dev"
+    )
+    scaling = Experiment(region_selector="aws-eu", object_store_selector="General Purpose", **fixed_args).as_replication_factors(1, 5) + \
+        Experiment(region_selector="aws-eu", **fixed_args).as_replication_factors(1, 5) + \
+        Experiment(region_selector="aws", **fixed_args).as_replication_factors(1, 2) + \
+        Experiment(region_selector="azure", **fixed_args).as_replication_factors(1, 2) + \
+        Experiment(region_selector="azure|aws", **fixed_args).as_replication_factors(1, 2)
+
+    # Order by replication factor
+    scaling.sort(key=lambda e: e.replication_factor)
 
     return scaling
 
@@ -295,6 +331,7 @@ def build_precomputation_batching_experiments(large=False):
         replication_factor=3,
         optimizer="PrimalSimplex",
         use_clarkson=False,
+        output_candidates=True,
         #profile="dev"
     )
     batch_sizes = [200, 500, 1000]
@@ -317,10 +354,37 @@ def build_cpu_scaling_experiments():
         object_store_selector="",
         #profile="dev"
     )
-    worker_numbers = [(18 * i)-2 for i in [8, 4, 2, 1]]
+    worker_numbers = [(20 * i)-2 for i in [4, 2, 1]]
     batch_size_scaling = [Experiment(redundancy_elimination_workers=w,**fixed_args) for w in worker_numbers]
 
     return batch_size_scaling
+
+def build_accuracy_small_experiments():
+    fixed_args = dict(
+        experiment_dir = os.path.join(os.getcwd(), "results", "accuracy"),
+        replication_factor=2,
+        batch_size=200,
+        #optimizer="lrs",
+        use_clarkson=False,
+        #region_selector="aws",
+        #object_store_selector="General Purpose",
+        redundancy_elimination_workers=10,
+        #profile="dev"
+    )
+    optimizers = ["PrimalSimplex", "InteriorPoint", "lrs"]
+    # Full replication range and list of optimizers for aws
+    batch_size_scaling = [Experiment(optimizer=o, **fixed_args).as_replication_factors(1, 5) for o in optimizers]
+    # Replication up to 2 and lrs for the rest
+    max_replication_factor = 2
+    batch_size_scaling.append(Experiment(region_selector="aws-eu", object_store_selector="General Purpose",optimizer="lrs", **fixed_args).as_replication_factors(1, max_replication_factor))
+    batch_size_scaling.append(Experiment(region_selector="aws-eu",optimizer="lrs", **fixed_args).as_replication_factors(1, max_replication_factor))
+    batch_size_scaling.append(Experiment(region_selector="azure",optimizer="lrs", **fixed_args).as_replication_factors(1, max_replication_factor))
+    batch_size_scaling.append(Experiment(region_selector="azure|azure",optimizer="lrs", **fixed_args).as_replication_factors(1, max_replication_factor))
+    
+    # Flatten the list of lists to a list of elements
+    flattened_list = [item for sublist in batch_size_scaling for item in sublist]
+
+    return flattened_list
 
 async def main(argv):
 
@@ -331,6 +395,7 @@ async def main(argv):
         #experiments = build_precomputation_batching_experiments(large=True)
         #experiments = build_cpu_scaling_experiments()
         experiments = build_scaling_experiments()
+        #experiments = build_accuracy_small_experiments()
 
     print("Running experiments:", len(experiments))
     for experiment in experiments:
