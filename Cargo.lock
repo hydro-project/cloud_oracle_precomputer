@@ -2125,6 +2125,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "sky-pie-baselines"
+version = "0.1.0"
+dependencies = [
+ "pyo3",
+ "sky-pie-precomputer",
+]
+
+[[package]]
 name = "sky-pie-precomputer"
 version = "0.1.0"
 dependencies = [

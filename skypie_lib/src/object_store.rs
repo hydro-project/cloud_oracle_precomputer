@@ -61,6 +61,11 @@ impl Cost {
         *self.ingress_cost.get(&region.region).unwrap() + region.get_egress_cost(object_store_region)
     }
 
+    pub fn compute_read_costs(&self, region: &ApplicationRegion, object_store_region: &Region, gets: f64, egress: f64) -> f64 {
+        let egress_costs = self.get_egress_cost(region, object_store_region);
+        self.get_cost * gets + egress_costs * egress
+    }
+
     #[allow(dead_code)]
     fn max_network_costs(o: NetworkCostMap, p: NetworkCostMap, o_transfer_cost: f64, p_transfer_cost: f64) -> NetworkCostMap {
         if o.len() == 0 {
@@ -274,6 +279,10 @@ impl ObjectStoreStruct {
     */
     pub fn get_ingress_cost(&self, region: &ApplicationRegion) -> f64 {
         self.cost.get_ingress_cost(region, &self.region)
+    }
+
+    pub fn compute_read_costs(&self, region: &ApplicationRegion, gets: f64, egress: f64) -> f64 {
+        self.cost.compute_read_costs(region, &self.region, gets, egress)
     }
 }
 
