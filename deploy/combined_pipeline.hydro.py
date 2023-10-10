@@ -89,7 +89,7 @@ class Experiment:
     data_dir: str = field(default_factory=os.getcwd)
     profile: str = "release"
     object_store_selector: str = ""
-    name: "str|None" = None
+    experiment_name: "str|None" = None
     experiment_dir_full: str = "" # This is set in __post_init__
     optimizer: str = "InteriorPoint",
     use_clarkson: bool = False
@@ -112,7 +112,7 @@ class Experiment:
             friendly_region_and_object_store = friendly_region
 
         # Create the name of the experiment
-        paths = ([self.name] if self.name is not None else []) + \
+        paths = ([self.experiment_name] if self.experiment_name is not None else []) + \
             [friendly_region_and_object_store, str(self.replication_factor), str(self.redundancy_elimination_workers), str(self.batch_size), str(self.optimizer), clarkson]
         self.experiment_dir_full = os.path.join(self.experiment_dir, *paths)
 
@@ -389,7 +389,8 @@ def build_accuracy_small_experiments():
 async def main(argv):
 
     if len(argv) > 0:
-        experiments = [Experiment(**get_args(argv).__dict__)]
+        exp_args = {k:v for k,v in get_args(argv).__dict__.items() if v}
+        experiments = [Experiment(**exp_args)]
     else:
         #experiments = build_precomputation_batching_experiments(large=False)
         #experiments = build_precomputation_batching_experiments(large=True)
