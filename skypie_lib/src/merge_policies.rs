@@ -233,6 +233,7 @@ impl<'a> Iterator for MergeIteratorRef<'a> {
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
+    use itertools::Itertools;
 
     use crate::{object_store::{self, ObjectStore}, merge_policies::AssignmentsRef, ApplicationRegion, Region};
     extern crate test;
