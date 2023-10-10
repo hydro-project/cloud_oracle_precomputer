@@ -162,6 +162,31 @@ mod messages {
         }
     }
 
+    pub fn load_decision_costs(paths: Vec<&Path>) -> Vec<Vec<f32>> {
+        let mut res = Vec::new();
+
+        for path in paths {
+            let message_iter = ProtobufFileReader::new(path).unwrap().into_iter_all::<Decision>();
+
+            res.extend(message_iter.map(|x: Decision| {
+                let len = x.cost_wl_halfplane.len();
+                x.cost_wl_halfplane.into_iter().take(len - 1).map(|x| x as f32).collect::<Vec<f32>>()
+            }));
+        }
+
+        return res;
+    }
+
+    pub fn load_decision_costs_parallel(paths: Vec<&Path>, threads: usize) -> Vec<Vec<f32>> {
+
+        let chunk_size = std::cmp::max(1, paths.len() / threads);
+        let res = paths.chunks(chunk_size).into_iter().par_bridge()
+            .map(|chunk|load_decision_costs(chunk.to_vec()))
+            .reduce(|| vec![], |mut acc: Vec<Vec<f32>>, next| {acc.extend(next); acc});
+
+        return res;
+    }
+
     pub fn load_decisions(paths: Vec<&Path>, compact: bool) -> Vec<Decision> {
         type M = Decision;
 
@@ -227,6 +252,7 @@ mod messages {
 #[cfg(feature = "python-module")]
 mod python {
     use crate::messages::{
+        load_decision_costs, load_decision_costs_parallel,
         load_decisions, load_decisions_parallel, load_wrapper,
         count_decisions, count_decisions_parallel,
         Assignment, Decision, OptimalByOptimizer, Run, Scheme,
@@ -236,6 +262,7 @@ mod python {
     use pyo3::pymethods;
     use pyo3::wrap_pyfunction;
     use std::path::Path;
+    use std::mem::size_of_val;
 
     #[pymethods]
     impl Assignment {
@@ -330,6 +357,29 @@ mod python {
         let paths = paths.into_iter().map(|p| Path::new(p)).collect();
         Ok(load_decisions_parallel(paths, threads, compact))
     }
+
+    #[pyfunction(name = "load_decision_costs")]
+    #[pyo3(text_signature = "(paths: List[String], /)")]
+    fn load_decision_costs_py(paths: Vec<&str>) -> PyResult<Vec<Vec<f32>>> {
+        let paths = paths.into_iter().map(|p| Path::new(p)).collect();
+        Ok(load_decision_costs(paths))
+    }
+
+    #[pyfunction(name = "load_decision_costs_parallel")]
+    #[pyo3(text_signature = "(paths: List[String], threads: int, /)")]
+    fn load_decision_costs_parallel_py(paths: Vec<&str>, threads: usize) -> PyResult<Vec<Vec<f32>>> {
+        let paths = paths.into_iter().map(|p| Path::new(p)).collect();
+        Ok(load_decision_costs_parallel(paths, threads))
+    }
+
+    #[pyfunction(name = "load_decision_costs_parallel_with_size")]
+    #[pyo3(text_signature = "(paths: List[String], threads: int, /)")]
+    fn load_decision_costs_parallel_with_size_py(paths: Vec<&str>, threads: usize) -> PyResult<(Vec<Vec<f32>>, usize)> {
+        let paths = paths.into_iter().map(|p| Path::new(p)).collect();
+        let res  = load_decision_costs_parallel(paths, threads);
+        let size = res.len() * res[0].len() * size_of_val(&res[0][0]);
+        Ok((res, size))
+    }
     
     #[pyfunction(name = "count_decisions")]
     #[pyo3(text_signature = "(paths: List[String], /)")]
@@ -356,6 +406,9 @@ mod python {
     fn skypie_proto_messages(_py: Python, m: &PyModule) -> PyResult<()> {
         m.add_function(wrap_pyfunction!(load_decisions_py, m)?)?;
         m.add_function(wrap_pyfunction!(load_decisions_parallel_py, m)?)?;
+        m.add_function(wrap_pyfunction!(load_decision_costs_py, m)?)?;
+        m.add_function(wrap_pyfunction!(load_decision_costs_parallel_py, m)?)?;
+        m.add_function(wrap_pyfunction!(load_decision_costs_parallel_with_size_py, m)?)?;
         m.add_function(wrap_pyfunction!(count_decisions_py, m)?)?;
         m.add_function(wrap_pyfunction!(count_decisions_parallel_py, m)?)?;
         m.add_function(wrap_pyfunction!(load_wrapper_py, m)?)?;
@@ -372,6 +425,6 @@ mod python {
 }
 
 pub use messages::{
-    load_decisions, load_decisions_parallel, load_wrapper, count_decisions, count_decisions_parallel, Assignment, Decision, OptimalByOptimizer, Run, Scheme, Setting,
+    load_decision_costs, load_decision_costs_parallel, load_decisions, load_decisions_parallel, load_wrapper, count_decisions, count_decisions_parallel, Assignment, Decision, OptimalByOptimizer, Run, Scheme, Setting,
     TierAdvise, Wrapper,
 };
