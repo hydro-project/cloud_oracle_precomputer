@@ -9,14 +9,15 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-hydroflow = { git = "https://github.com/hydro-project/hydroflow", features = [ "cli_integration", "python"]}
+hydroflow = { git = "https://github.com/hydro-project/hydroflow"} #features = [ "cli_integration", "python"]
 tokio = { version = "1", features = ["full"] }
 bytes = "^1"
 prost = "0.11.9"
 # Only necessary if using Protobuf well-known types:
 prost-types = "0.11.9"
-pyo3 = { version = "^0.18", features = ["abi3-py37"] }
+pyo3 = { version = "0.20", features = ["abi3-py37"] }
 rayon = "1.7"
+numpy = "0.20"
 
 [build-dependencies]
 prost-build = { version = "0.11.9" }

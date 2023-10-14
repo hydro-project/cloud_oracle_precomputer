@@ -261,8 +261,10 @@ mod python {
     use pyo3::prelude::*;
     use pyo3::pymethods;
     use pyo3::wrap_pyfunction;
+    use numpy::{PyArray, PyArrayDyn};
     use std::path::Path;
     use std::mem::size_of_val;
+    use crate::ProtobufFileReader;
 
     #[pymethods]
     impl Assignment {
@@ -402,11 +404,44 @@ mod python {
         Ok(load_wrapper(path))
     }
 
+    #[pyfunction]
+    pub fn load_decision_costs_numpy<'py>(py: Python<'py>, paths: Vec<String>) -> &'py PyArrayDyn<f32> {
+        
+            let path = Path::new(paths.first().unwrap());
+            let cols = ProtobufFileReader::new(&path).unwrap().into_iter_all::<Decision>().take(1).map(|x: Decision| {
+                x.cost_wl_halfplane.len()
+            }).reduce(|a, b| a.max(b)).unwrap();
+            let cols = cols - 1; // Skip cost dimension
+
+            let iter = paths.into_iter()
+            .flat_map(|path|{
+                let path = Path::new(&path);
+                let message_iter = ProtobufFileReader::new(path).unwrap().into_iter_all::<Decision>();
+                let c = message_iter.flat_map(|x: Decision| {
+                    x.cost_wl_halfplane.into_iter().take(cols).map(|x| x as f32)
+                });
+                c
+            }).collect::<Vec<f32>>();
+            let pyarray_1dim = PyArray::from_iter(py, iter);
+            
+            // Reshape to 2 dimensions
+            // Check that the number of elements is multiple of cols
+            if pyarray_1dim.len() % cols != 0 {
+                panic!("Inconsistent number of elements in decision costs");
+            };
+            let rows = pyarray_1dim.len() / cols;
+            let dims = vec![rows, cols];
+            let pyarray_2dim: &PyArrayDyn<f32> = pyarray_1dim.reshape(dims).unwrap();
+
+            pyarray_2dim
+    }
+
     #[pymodule]
     fn skypie_proto_messages(_py: Python, m: &PyModule) -> PyResult<()> {
         m.add_function(wrap_pyfunction!(load_decisions_py, m)?)?;
         m.add_function(wrap_pyfunction!(load_decisions_parallel_py, m)?)?;
         m.add_function(wrap_pyfunction!(load_decision_costs_py, m)?)?;
+        m.add_function(wrap_pyfunction!(load_decision_costs_numpy, m)?)?;
         m.add_function(wrap_pyfunction!(load_decision_costs_parallel_py, m)?)?;
         m.add_function(wrap_pyfunction!(load_decision_costs_parallel_with_size_py, m)?)?;
         m.add_function(wrap_pyfunction!(count_decisions_py, m)?)?;
