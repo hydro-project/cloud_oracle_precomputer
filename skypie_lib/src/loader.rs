@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::{HashMap, HashSet}, path::PathBuf};
 
 use crate::{
     network_record::{NetworkRecord, NetworkRecordRaw, NetworkCostMaps},
@@ -14,9 +14,17 @@ pub struct Loader {
 }
 
 impl Loader {
-    pub fn new(network_file_path: &PathBuf, object_store_file_path: &PathBuf, region_pattern: &str, object_store_pattern: &str) -> Loader {
+    pub fn with_region_and_object_store_names(network_file_path: &PathBuf, object_store_file_path: &PathBuf, region_list: Vec<Region>, object_store_list: &Vec<String>) -> Self {
+        Loader::load(network_file_path, object_store_file_path, None, None, Some(region_list), Some(object_store_list))
+    }
 
-        let (network_egress, regions, region_names) = Loader::load_network(network_file_path, region_pattern);
+    pub fn new(network_file_path: &PathBuf, object_store_file_path: &PathBuf, region_pattern: &str, object_store_pattern: &str) -> Loader {
+        Loader::load(network_file_path, object_store_file_path, Some(region_pattern), Some(object_store_pattern), None, None)
+    }
+
+    fn load(network_file_path: &PathBuf, object_store_file_path: &PathBuf, region_pattern: Option<&str>, object_store_pattern: Option<&str>, region_list: Option<Vec<Region>>, object_store_list: Option<&Vec<String>>) -> Loader {
+
+        let (network_egress, regions, region_names) = Loader::load_network(network_file_path, region_pattern, region_list);
         
         // Load network ingress costs, currently 0.0
         let network_ingress = network_egress
@@ -39,9 +47,8 @@ impl Loader {
         assert!(!network_egress.is_empty());
         assert!(!network_ingress.is_empty());
         assert!(!regions.is_empty());
-
-        // Load object stores
-        let object_stores = Loader::load_object_stores(object_store_file_path, region_pattern, &network_egress, &network_ingress, &region_names, object_store_pattern);
+        
+        let object_stores = Loader::load_object_stores(object_store_file_path, &network_egress, &network_ingress, &region_names, object_store_pattern, object_store_list);
 
         
         // Load application regions
@@ -63,23 +70,35 @@ impl Loader {
 
     fn load_network(
         network_file_path: &PathBuf,
-        region_pattern: &str,
+        region_pattern: Option<&str>,
+        region_list: Option<Vec<Region>>,
     ) -> (NetworkCostMaps, Vec<Region>, HashMap<String, Region>) {
         
-        let re = Regex::new(region_pattern).unwrap();
-        
-        let rdr2 = csv::Reader::from_path(network_file_path).unwrap();
-        let iter2: csv::DeserializeRecordsIntoIter<std::fs::File, NetworkRecordRaw> =
-        rdr2.into_deserialize();
-        
-        // Collect all region names, including the destination regions
-        let regions = iter2
-        .map(|r: Result<NetworkRecordRaw, csv::Error>| -> NetworkRecord { r.unwrap().into() })
-        //.inspect(|r| println!("Raw network: {:?}", r))
-        .filter(|r| re.is_match(&r.src.name) && re.is_match(&r.dest.name))
-        .map(|r| {
-            [r.src.clone(), r.dest.clone()]
-        }).flatten().unique().sorted().enumerate().map(|(i, r)| Region{id: i as u16, name: r.name}).collect_vec();
+        let regions = if let Some(region_pattern) = region_pattern {
+
+            let re = Regex::new(region_pattern).unwrap();
+            
+            let rdr2 = csv::Reader::from_path(network_file_path).unwrap();
+            let iter2: csv::DeserializeRecordsIntoIter<std::fs::File, NetworkRecordRaw> =
+            rdr2.into_deserialize();
+            
+            // Collect all region names, including the destination regions
+            let regions = iter2
+            .map(|r: Result<NetworkRecordRaw, csv::Error>| -> NetworkRecord { r.unwrap().into() })
+            //.inspect(|r| println!("Raw network: {:?}", r))
+            .filter(|r| re.is_match(&r.src.name) && re.is_match(&r.dest.name))
+            .map(|r| {
+                [r.src.clone(), r.dest.clone()]
+            }).flatten().unique().sorted().enumerate().map(|(i, r)| Region{id: i as u16, name: r.name}).collect_vec();
+
+            regions
+        }
+        else if let Some(region_list) = region_list {
+            region_list
+        }
+        else {
+            panic!("Must specify either region pattern or region list");
+        };
 
         let region_names: HashMap<String, Region> = HashMap::from_iter(regions.iter().map(|r| (r.name.clone(), r.clone())));
 
@@ -90,7 +109,7 @@ impl Loader {
         let mut network_costs: NetworkCostMaps = iter
             .map(|r: Result<NetworkRecordRaw, csv::Error>| -> NetworkRecord { r.unwrap().into() })
             //.inspect(|r| println!("Raw network: {:?}", r))
-            .filter(|r| re.is_match(&r.src.name) && re.is_match(&r.dest.name))
+            .filter(|r| region_names.contains_key(&r.src.name) && region_names.contains_key(&r.dest.name))
             //.inspect(|r| println!("Filtered network: {:?}", r))
             .fold(NetworkCostMaps::new(), |mut agg, e| {
                 // Collect src/dest region in regions
@@ -148,17 +167,21 @@ impl Loader {
             }
         }
         assert_eq!(regions.len(), unique);
-        assert_eq!(min, 0);
-        assert_eq!(max as usize, regions.len() - 1);
+        if region_pattern.is_some() {
+            assert_eq!(min, 0);
+            assert_eq!(max as usize, regions.len() - 1);
+        }
 
         regions.iter().for_each(|r|{assert!(r.get_id() != u16::MAX, "Found region with id u16::MAX {:?}", r)});
 
         return (network_costs, regions, region_names);
     }
 
-    fn load_object_stores(object_store_file_path: &PathBuf, region_pattern: &str, egress_costs: &NetworkCostMaps, ingress_costs: &NetworkCostMaps, region_names: &HashMap<String, Region>, object_store_pattern: &str) -> Vec<ObjectStore> {
-        let region_regex = Regex::new(region_pattern).unwrap();
-        let object_store_regex = Regex::new(object_store_pattern).unwrap();
+    fn load_object_stores(object_store_file_path: &PathBuf, egress_costs: &NetworkCostMaps, ingress_costs: &NetworkCostMaps, region_names: &HashMap<String, Region>, object_store_pattern: Option<&str>, object_store_list: Option<&Vec<String>>) -> Vec<ObjectStore> {
+        let object_store_regex = Regex::new(object_store_pattern.unwrap_or("")).unwrap();
+
+        let default_vec = vec![];
+        let object_store_set:HashSet<&String> = HashSet::from_iter(object_store_list.unwrap_or(&default_vec));
 
         let rdr = csv::Reader::from_path(object_store_file_path).unwrap();
         let iter: csv::DeserializeRecordsIntoIter<std::fs::File, ObjectStoreStructRaw> =
@@ -166,7 +189,11 @@ impl Loader {
 
         let object_stores: Vec<ObjectStore> = iter
             .map(|x| x.unwrap().into())
-            .filter(|r: &ObjectStoreStruct| region_regex.is_match(&r.region.name) && object_store_regex.is_match(&r.name))
+            .filter(|r: &ObjectStoreStruct| {
+                let full_name = format!("{}-{}", r.region.name, r.name);
+                region_names.contains_key(&r.region.name)
+                && (object_store_regex.is_match(&r.name) || object_store_set.contains(&full_name))
+            })
             .map(|o|ObjectStore::new(o))
             // Combine object stores with identical names
             .fold(HashMap::new(), |mut agg, mut object_store| {
@@ -228,6 +255,7 @@ impl Loader {
             //.map(|x| ObjectStore::new(x))
             .collect_vec();
 
+        assert!(object_stores.len() > 0);
         let min = object_stores.iter().map(|r|r.get_id()).min().unwrap();
         let max = object_stores.iter().map(|r|r.get_id()).max().unwrap();
         let unique = object_stores.iter().map(|r|r.get_id()).unique().collect_vec().len();

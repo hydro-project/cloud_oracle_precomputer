@@ -9,7 +9,7 @@ pub mod region;
 pub mod object_store;
 pub mod application_region;
 
-mod identifier;
+pub mod identifier;
 
 pub mod merge_policies;
 pub mod opt_assignments;
