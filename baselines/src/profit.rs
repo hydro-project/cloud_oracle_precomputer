@@ -1,4 +1,6 @@
-use pyo3::prelude::*;
+use itertools::Itertools;
+use pyo3::{prelude::*, types::PyList};
+use rayon::{prelude::IntoParallelRefIterator,iter::ParallelIterator};
 use std::collections::HashMap;
 
 use skypie_lib::{
@@ -8,6 +10,7 @@ use skypie_lib::{
 use super::{Optimizer, OptimizerData, Workload};
 
 #[pyclass]
+#[derive(Debug)]
 pub struct ProfitBasedOptimizer {
     object_stores: Vec<ObjectStore>,
     application_regions: Vec<ApplicationRegion>,
@@ -95,6 +98,20 @@ impl ProfitBasedOptimizer {
         let (cost, decision) = self._optimize(workload);
 
         (cost, decision.write_choice.object_stores.len() as i32)
+    }
+
+    pub fn optimize_batch<'py>(&self, workloads: &'py PyList) -> Vec<(f64, i32)> {
+        
+        let workloads = workloads.iter().map(|x|{
+            let w = x.extract::<PyRef<'py,Workload>>().unwrap();
+            (*w).clone()
+        }).collect_vec();
+        
+        workloads.par_iter().map(|w| {self.optimize(&w)}).collect()
+    }
+
+    pub fn __repr__(&self) -> String {
+        format!("{:?}", self)
     }
 }
 

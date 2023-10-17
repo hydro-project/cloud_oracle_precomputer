@@ -29,7 +29,7 @@ pub struct KmeansOptimizer {
     //PriceNet: HashMap<String, HashMap<String, f64>>, // Map of object store names to map of application region names to net prices
     //dest: HashMap<String, usize>,
     max_iterations: usize,
-    threshold: f64,
+    threshold: f32,
 }
 
 #[pymethods]
@@ -44,7 +44,7 @@ impl KmeansOptimizer {
         num_replicas: usize,
         max_iterations: usize,
         verbose: usize,
-        threshold: f64,
+        threshold: f32,
         max_num_replicas: Option<usize>
     ) -> Self {
         let max_num_replicas = max_num_replicas.unwrap_or(num_replicas);
@@ -130,14 +130,14 @@ impl Optimizer for KmeansOptimizer {
 
             // Compute read costs (get + egress) of each application for each object store under given workloads
             // Optimization to avoid recomputation
-            let mut get_costs_o_c = Array2::zeros((self.s_capital.len(), self.c_capital.len()));
+            let mut get_costs_o_c = Array2::<f32>::zeros((self.s_capital.len(), self.c_capital.len()));
             for o in &self.s_capital {
                 for c in &self.c_capital {
                     get_costs_o_c[(*o, *c)] = self.object_stores[*o].compute_read_costs(
                         &self.application_regions[*c],
                         w.get_gets(*c),
                         w.get_egress(*c),
-                    );
+                    ) as f32;
                 }
             }
     
@@ -164,7 +164,7 @@ impl Optimizer for KmeansOptimizer {
 
 impl KmeansOptimizer {
     
-    fn weighted_k_means(&self, w: &Workload, get_costs_o_c: &Array2<f64>, num_replicas: usize) -> ReadChoice {
+    fn weighted_k_means(&self, w: &Workload, get_costs_o_c: &Array2<f32>, num_replicas: usize) -> ReadChoice {
 
         // IDs of application regions
         let c_capital = &self.c_capital; //.clone();
@@ -254,7 +254,7 @@ impl KmeansOptimizer {
         read_choice
     }
      
-    fn cost_read(&self, clients: &[usize], object_stores: &[usize], get_costs_o_c: &Array2<f64>) -> f64 {
+    fn cost_read(&self, clients: &[usize], object_stores: &[usize], get_costs_o_c: &Array2<f32>) -> f32 {
         let mut res = 0.0;
         for &o in object_stores {
             for &c in clients {
@@ -264,14 +264,14 @@ impl KmeansOptimizer {
         res
     }
 
-    fn nearest(&self, c: usize, s: &[usize], get_costs_o_c: &Array2<f64>) -> usize {
+    fn nearest(&self, c: usize, s: &[usize], get_costs_o_c: &Array2<f32>) -> usize {
         /*
         Compute for client c the closest object store in S
         */
         self.argmin(s, &[c], get_costs_o_c)
     }
 
-    fn argmin(&self, s: &[usize], c: &[usize], get_costs_o_c: &Array2<f64>) -> usize {
+    fn argmin(&self, s: &[usize], c: &[usize], get_costs_o_c: &Array2<f32>) -> usize {
         /*
         Compute for clients C the jointly cheapest object store in S
         */

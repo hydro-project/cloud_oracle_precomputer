@@ -127,3 +127,5 @@ optimizer = ProfitBasedOptimizer(network_file, object_store_file, object_stores,
 
 cost, decision = optimizer.optimize(workload)
 print(f"Cost: {cost}")
+res_List = optimizer.optimize_batch([workload, workload])
+print(f"Res list: {res_List}")
