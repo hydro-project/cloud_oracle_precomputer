@@ -1,6 +1,7 @@
 use pyo3::prelude::*;
 
 #[pyclass]
+#[derive(Clone, Debug)]
 pub struct Workload {
     pub size: f64,
     pub puts: f64,
