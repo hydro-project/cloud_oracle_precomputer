@@ -8,11 +8,13 @@ pub use protobuf_file_sink::ProtobufFileSink;
 mod messages {
     use crate::{ProtobufFileReader, ProtobufFileSink};
     use hydroflow::futures::SinkExt;
+    use numpy::{PyArrayDyn, PyArray};
     use prost::Message;
     #[cfg(feature = "python-module")]
     use pyo3::prelude::*;
+    use pyo3::{pyfunction, Python};
     use rayon::prelude::*;
-    use std::{collections::HashMap, path::Path};
+    use std::{collections::HashMap, path::Path, fs};
 
     include!(concat!(env!("OUT_DIR"), "/skypie.rs"));
 
@@ -47,6 +49,15 @@ mod messages {
             Self { tier_advise }
         }
 
+        pub fn combine(&mut self, other: &Self, original_path: &Path, output_path: &Path, output_path_suffix: &Path, replace_with_candidates: bool) {
+            println!("Combining wrapper");
+
+            let tier_advise = self.tier_advise.as_mut().unwrap();
+            let other_tier_advise = other.tier_advise.as_ref().unwrap();
+
+            tier_advise.combine(other_tier_advise, original_path, output_path, output_path_suffix, replace_with_candidates);
+        }
+
         /// Saves the protobuf message to a binary file at the given path.
         ///
         /// # Arguments
@@ -73,6 +84,25 @@ mod messages {
 
             let replication_factor = HashMap::from_iter(vec![(replication_factor, setting)]);
             Self { replication_factor }
+        }
+
+        pub fn combine(&mut self, other: &Self, original_path: &Path, output_path: &Path, output_path_suffix: &Path, replace_with_candidates: bool) {
+            println!("Combining tier advise");
+            let self_first_entry = self.replication_factor.iter_mut().next().unwrap();
+            for (_replication_factor, setting) in &other.replication_factor {
+                self_first_entry.1.combine(setting, original_path, output_path, output_path_suffix, replace_with_candidates);
+            }
+        }
+    }
+
+    impl Setting {
+        pub fn combine(&mut self, other: &Self, original_path: &Path, output_path: &Path, output_path_suffix: &Path, replace_with_candidates: bool) {
+            println!("Combining settings");
+            let my_first_run = self.runs.iter_mut().next().unwrap();
+            for (_run_name, run) in &other.runs {
+                
+                    my_first_run.1.combine(run, original_path, output_path, output_path_suffix, replace_with_candidates);
+            }
         }
     }
 
@@ -115,6 +145,28 @@ mod messages {
                 optimal_partitions_by_optimizer,
             }
         }
+
+        pub fn combine(&mut self, other: &Self, original_path: &Path, output_path: &Path, output_path_suffix: &Path, replace_with_candidates: bool) {
+            println!("Combining runs");
+
+            self.enumerator_time_ns = Some(self.enumerator_time_ns.unwrap() + other.enumerator_time_ns.unwrap());
+            self.min_replication_factor = Some(self.min_replication_factor.unwrap().min(other.min_replication_factor.unwrap()));
+            self.max_replication_factor = Some(self.max_replication_factor.unwrap().max(other.max_replication_factor.unwrap()));
+            assert_eq!(self.no_app_regions.unwrap(), other.no_app_regions.unwrap());
+            assert_eq!(self.no_dimensions.unwrap(), other.no_dimensions.unwrap());
+            self.no_facets = Some(self.no_facets.unwrap() + other.no_facets.unwrap());
+            self.partitioner_time_ns = Some(self.partitioner_time_ns.unwrap() + other.partitioner_time_ns.unwrap());
+            //self.no_object_stores = Some(self.no_object_stores.unwrap().max(other.no_object_stores.unwrap()));
+            assert_eq!(self.object_stores_considered, other.object_stores_considered);
+
+            let candidates = if replace_with_candidates {Some(&other.candidate_partitions)} else {None};
+
+            let my_first_optimizer = self.optimal_partitions_by_optimizer.iter_mut().next().unwrap();
+
+            for (_optimizer_name, optimal_by_optimizer) in &other.optimal_partitions_by_optimizer {
+                my_first_optimizer.1.combine(optimal_by_optimizer, original_path, output_path, output_path_suffix, candidates);
+            }
+        }
     }
 
     impl OptimalByOptimizer {
@@ -131,6 +183,36 @@ mod messages {
                 partitioner_time_ns,
                 partitioner_computation_time_ns,
             }
+        }
+
+        pub fn combine(&mut self, other: &Self, original_path: &Path, output_path: &Path, output_path_suffix: &Path, candidates: Option<&Vec<String>>) {
+            println!("Combining optimal partitions");
+            //assert_eq!(self.optimizer_type, other.optimizer_type);
+            self.no_facets = Some(self.no_facets.unwrap() + other.no_facets.unwrap());
+            self.partitioner_time_ns = Some(self.partitioner_time_ns.unwrap() + other.partitioner_time_ns.unwrap());
+            self.partitioner_computation_time_ns = Some(self.partitioner_computation_time_ns.unwrap() + other.partitioner_computation_time_ns.unwrap());
+
+            let partitions = if let Some(candidates) = candidates {
+                candidates
+            } else {
+                &other.optimal_partitions
+            };
+
+            for partition in partitions {
+                let output_suffix = output_path_suffix.join(partition);
+                self.optimal_partitions.push(output_suffix.to_str().unwrap().to_string());
+            }
+
+            partitions.par_iter().for_each(|partition|{
+                let output_suffix = output_path_suffix.join(partition);
+
+                // Copy file from original location to output location
+                let original_file = original_path.join(partition);
+                let output_file = output_path.join(output_suffix);
+                let copy_error_msg = format!("Failed to copy file {} to {}", original_file.to_string_lossy(), output_file.to_string_lossy());
+                println!("Copying file {} to {}", original_file.to_string_lossy(), output_file.to_string_lossy());
+                fs::copy(original_file, output_file).expect(copy_error_msg.as_str());
+            });
         }
     }
 
@@ -265,6 +347,7 @@ mod python {
     use std::path::Path;
     use std::mem::size_of_val;
     use crate::ProtobufFileReader;
+    use rayon::iter::{ParallelBridge,IntoParallelIterator,ParallelIterator};
 
     #[pymethods]
     impl Assignment {
@@ -341,8 +424,20 @@ mod python {
 
     #[pymethods]
     impl Wrapper {
+        fn combine_py(&mut self, other: &Self, original_path: &str, output_path: &str, output_path_suffix: &str, replace_with_candidates: bool) {
+            self.combine(other, Path::new(original_path), Path::new(output_path), Path::new(output_path_suffix), replace_with_candidates);
+        }
+
+        fn save_py(&self, path: &str) {
+            self.save(path);
+        }
+
         fn __repr__(&self) -> String {
             format!("{:?}", self)
+        }
+
+        fn __str__(&self) -> String {
+            self.__repr__()
         }
     }
 
@@ -421,6 +516,38 @@ mod python {
                     x.cost_wl_halfplane.into_iter().take(cols).map(|x| x as f32)
                 });
                 c
+            }); //.collect::<Vec<f32>>();
+            let pyarray_1dim = PyArray::from_iter(py, iter);
+            
+            // Reshape to 2 dimensions
+            // Check that the number of elements is multiple of cols
+            if pyarray_1dim.len() % cols != 0 {
+                panic!("Inconsistent number of elements in decision costs");
+            };
+            let rows = pyarray_1dim.len() / cols;
+            let dims = vec![rows, cols];
+            let pyarray_2dim: &PyArrayDyn<f32> = pyarray_1dim.reshape(dims).unwrap();
+
+            pyarray_2dim
+    }
+
+    #[pyfunction]
+    pub fn load_decision_costs_numpy_parallel<'py>(py: Python<'py>, paths: Vec<String>) -> &'py PyArrayDyn<f32> {
+        
+            let path = Path::new(paths.first().unwrap());
+            let cols = ProtobufFileReader::new(&path).unwrap().into_iter_all::<Decision>().take(1).map(|x: Decision| {
+                x.cost_wl_halfplane.len()
+            }).reduce(|a, b| a.max(b)).unwrap();
+            let cols = cols - 1; // Skip cost dimension
+
+            let iter = paths.into_par_iter() //.into_iter()
+            .flat_map(|path|{
+                let path = Path::new(&path);
+                let message_iter = ProtobufFileReader::new(path).unwrap().into_iter_all::<Decision>();
+                let c = message_iter.flat_map(|x: Decision| {
+                    x.cost_wl_halfplane.into_iter().take(cols).map(|x| x as f32)
+                }).par_bridge();
+                c
             }).collect::<Vec<f32>>();
             let pyarray_1dim = PyArray::from_iter(py, iter);
             
@@ -442,6 +569,7 @@ mod python {
         m.add_function(wrap_pyfunction!(load_decisions_parallel_py, m)?)?;
         m.add_function(wrap_pyfunction!(load_decision_costs_py, m)?)?;
         m.add_function(wrap_pyfunction!(load_decision_costs_numpy, m)?)?;
+        m.add_function(wrap_pyfunction!(load_decision_costs_numpy_parallel, m)?)?;
         m.add_function(wrap_pyfunction!(load_decision_costs_parallel_py, m)?)?;
         m.add_function(wrap_pyfunction!(load_decision_costs_parallel_with_size_py, m)?)?;
         m.add_function(wrap_pyfunction!(count_decisions_py, m)?)?;

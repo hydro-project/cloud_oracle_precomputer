@@ -5,6 +5,7 @@ use pyo3::types::PyList;
 use rayon::prelude::IntoParallelRefIterator;
 use rayon::iter::ParallelIterator;
 use skypie_lib::identifier::Identifier;
+use skypie_lib::write_choice;
 use std::collections::HashMap;
 
 use skypie_lib::{
@@ -141,11 +142,8 @@ impl Optimizer for KmeansOptimizer {
                 }
             }
     
-            let read_choice = self.weighted_k_means(w, &get_costs_o_c, num_replicas);
+            let decision = self.weighted_k_means(w, &get_costs_o_c, num_replicas);
     
-            let write_choice = WriteChoice{object_stores: read_choice.iter().map(|(_, o)| o.clone()).unique().collect()};
-    
-            let decision = Decision {write_choice, read_choice};
             let cost = self.cost(w, &decision);
     
             // XXX: Implement serialization of decision, but we don't care right now.
@@ -164,7 +162,7 @@ impl Optimizer for KmeansOptimizer {
 
 impl KmeansOptimizer {
     
-    fn weighted_k_means(&self, w: &Workload, get_costs_o_c: &Array2<f32>, num_replicas: usize) -> ReadChoice {
+    fn weighted_k_means(&self, w: &Workload, get_costs_o_c: &Array2<f32>, num_replicas: usize) -> Decision {
 
         // IDs of application regions
         let c_capital = &self.c_capital; //.clone();
@@ -191,6 +189,9 @@ impl KmeansOptimizer {
             }
         }
 
+        #[cfg(dev)]
+        println!("Initial centroids: {:?}", g_capital);
+
         //11: new cost ← cost(G)
         let mut new_cost = self.cost_read(&c_capital, &g_capital, &get_costs_o_c);
         //12: repeat
@@ -211,6 +212,10 @@ impl KmeansOptimizer {
             //16: // attempt to adjust centroids
             //17: for each g ∈ G \ Lfixed
             for g in &mut g_capital {
+                
+                // Equal access costs of two object stores lead to empty clusters!
+                if !cg.contains_key(&g) {continue;}
+
                 //18: g′ ← v ∈ S s.t. ∑ c∈Cg wc · rtt(i) c,v is minimized
                 let g_new = self.argmin(&s_capital, &cg[&g], &get_costs_o_c);
 
@@ -237,8 +242,9 @@ impl KmeansOptimizer {
             }
         }
         //22: return G
-        if cg.len() != num_replicas as usize {
-            println!("Unexpected number of replicas: {}", cg.len());
+        #[cfg(dev)]
+        if g_capital.len() != num_replicas as usize {
+            println!("Unexpected number of replicas: expected {}, got {}, Write Choice: {:?}, Read Choice: {:?}", num_replicas, g_capital.len(), g_capital, cg);
         }
         
         // Translate Cg to ReadChoice
@@ -251,7 +257,10 @@ impl KmeansOptimizer {
             }
         }
 
-        read_choice
+        // Translate G to Write Choice
+        let write_choice = WriteChoice{object_stores: g_capital.iter().map(|&g| self.object_stores[g].clone()).collect()};
+
+        Decision {write_choice, read_choice}
     }
      
     fn cost_read(&self, clients: &[usize], object_stores: &[usize], get_costs_o_c: &Array2<f32>) -> f32 {
