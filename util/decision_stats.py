@@ -35,7 +35,7 @@ def decision_stats(*, stats_file: str, scenario_path: str, threads: int=10, skip
     optimizer_name = list(scenario.optimal_partitions_by_optimizer.keys())[0]
     path = os.path.dirname(stats_file)
     
-    # Cound the number of candidate decisions
+    # Count the number of candidate decisions
     no_candidates = 0
     if not skip_num_decisions:
         files = [os.path.join(path, f) for f in scenario.candidate_partitions]
@@ -90,6 +90,9 @@ def decision_stats_to_json(*, stats_dir: str, scenario_path: str="tier_advise/re
 
 #stats_dir = "/home/vscode/sky-pie-precomputer/results/batch_size_scaling"
 #decision_stats_to_json(stats_dir=stats_dir)
-decision_stats_to_json(stats_dir="/home/eecs/tbang/git/sky-pie-precomputer/results/cpu_scaling", threads=20)
-decision_stats_to_json(stats_dir="/home/vscode/sky-pie-precomputer/results/precomputation_scaling", threads=40)
+#decision_stats_to_json(stats_dir="/home/eecs/tbang/git/sky-pie-precomputer/results/cpu_scaling", threads=20)
+#decision_stats_to_json(stats_dir="/home/vscode/sky-pie-precomputer/results/precomputation_scaling", threads=40)
 #decision_stats_to_json(stats_dir="/home/vscode/sky-pie-precomputer/results/precomputation_scaling/aws/3/60", threads=40)
+#decision_stats_to_json(stats_dir="/home/vscode/sky-pie-precomputer/results/precomputation_batching/aws-azure", threads=40)
+decision_stats_to_json(stats_dir="/home/vscode/sky-pie-precomputer/results/precomputation_scaling/aws-eu", threads=40)
+decision_stats_to_json(stats_dir="/home/vscode/sky-pie-precomputer/results/precomputation_scaling/aws-eu-General-Purpose", threads=40)
