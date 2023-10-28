@@ -1,4 +1,4 @@
-use hydroflow::{tokio_stream::Stream};
+use hydroflow::tokio_stream::Stream;
 use std::task::{Poll, Context};
 
 /// Returns an unfused iterator that emits `n` items from `iter` at a time, with `None`s in-between.

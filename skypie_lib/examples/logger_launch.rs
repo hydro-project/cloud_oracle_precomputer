@@ -23,11 +23,20 @@ async fn main() {
         &args.network_file,
         &args.object_store_file,
         &args.region_selector,
-        &args.object_store_selector
+        &args.object_store_selector,
+        &args.latency_file,
+        &args.latency_slo
     );
 
     let time_input_recv = ports
         .port("time_input")
+        // connect to the port with a single recipient
+        .connect::<ConnectedDirect>() 
+        .await
+        .into_source();
+
+    let count_input_recv = ports
+        .port("count_input")
         // connect to the port with a single recipient
         .connect::<ConnectedDirect>() 
         .await
@@ -47,6 +56,7 @@ async fn main() {
         .into_sink();
 
     type Input = (SkyPieLogEntryType, std::time::Duration);
+    type CountInput = (SkyPieLogEntryType, usize);
 
     // Write basic stats to file
     let no_app_regions = loader.app_regions.len();
@@ -124,16 +134,31 @@ async fn main() {
             -> inspect(|_| {println!("All workers done!");})
             -> dest_sink(done_sink);
 
+        counts = source_stream(count_input_recv)
+            -> map(|x| -> CountInput {deserialize_from_bytes(x.unwrap()).unwrap()})
+            ->reduce_keyed::<'static>(|old: &mut usize, val| *old += val)
+            ->fold(HashMap::<SkyPieLogEntryType, usize>::new(), |map: &mut HashMap<_,_>, (entry_type, count)|{
+                *(map.entry(entry_type).or_default()) += count;
+            });
+            //-> fold(HashMap<SkyPieLogEntryType, usize>::new, |x, y| {x});
+            //-> fold::<'static>(HashMap<SkyPieLogEntryType, usize>::new, |x, y| {x}) -> null();
+
         input = source_stream(time_input_recv) -> map(|x| -> Input {deserialize_from_bytes(x.unwrap()).unwrap()});
-        input -> fold::<'static>(Default::default(), |map: &mut HashMap::<SkyPieLogEntryType, Duration>, (entry_type, duration)|{
+        times = input -> fold::<'static>(Default::default(), |map: &mut HashMap::<SkyPieLogEntryType, Duration>, (entry_type, duration)|{
                 *(map.entry(entry_type).or_default()) += duration;
-            })
-            -> for_each(|x: HashMap::<SkyPieLogEntryType, Duration>|{
+            });
+
+        counts -> [0]log;
+        times -> [1]log;
+        log = cross_join::<'tick>()
+            -> for_each(|(counts, x): (HashMap::<SkyPieLogEntryType, usize>, HashMap::<SkyPieLogEntryType, Duration>)|{
                 let zero_duration = Duration::from_secs(0);
                 let total_time = x.get(&SkyPieLogEntryType::Total).unwrap_or(&zero_duration);
                 let redundancy_elimination_time = x.get(&SkyPieLogEntryType::RedundancyElimination).unwrap_or(&zero_duration);
                 let write_chioce_time = x.get(&SkyPieLogEntryType::WriteChoiceGeneration).unwrap_or(&zero_duration);
                 let total_time = *total_time + *write_chioce_time;
+
+                let optimal_placements = counts.get(&SkyPieLogEntryType::OptimalCount).unwrap_or(&0);
 
                 if *redundancy_elimination_time == zero_duration {
                     return;
@@ -145,7 +170,7 @@ async fn main() {
                 } else {
                     total_time - (*redundancy_elimination_time)
                 };
-                println!("{}: Total time: {:?}, Enumerator time: {:?}, Redundancy elimination time: {:?}, Write Choice time: {:?}", context.current_tick(), total_time, enumerator_time, redundancy_elimination_time, write_chioce_time);
+                println!("{}: Total time: {:?}, Enumerator time: {:?}, Redundancy elimination time: {:?}, Write Choice time: {:?}, Optimal placements: {}", context.current_tick(), total_time, enumerator_time, redundancy_elimination_time, write_chioce_time, optimal_placements);
 
                 let partitioner_time_ns = redundancy_elimination_time.as_secs() as i64 * 1_000_000_000 + redundancy_elimination_time.subsec_nanos() as i64;
 
@@ -154,6 +179,7 @@ async fn main() {
                     .runs.entry("place_holder".to_string()).or_default();
                 run.enumerator_time_ns = Some(enumerator_time.as_secs() as i64 * 1_000_000_000 + enumerator_time.subsec_nanos() as i64);
                 run.partitioner_time_ns = Some(partitioner_time_ns);
+                run.no_facets = Some(*optimal_placements as i64);
 
                 let optimizer = stats.tier_advise.as_mut().unwrap()
                     .replication_factor.entry(replication_factor).or_default()
@@ -162,6 +188,7 @@ async fn main() {
     
                 optimizer.partitioner_computation_time_ns = Some(partitioner_time_ns);
                 optimizer.partitioner_time_ns = Some(partitioner_time_ns);
+                optimizer.no_facets = Some(*optimal_placements as i64);
                 
                 stats.save(&stats_file_name);
             });

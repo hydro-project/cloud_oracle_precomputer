@@ -31,6 +31,12 @@ pub struct Args {
     #[clap(short = 'n', long)]
     pub network_file: PathBuf,
 
+    #[clap(long)]
+    pub latency_file: Option<PathBuf>,
+
+    #[clap(long)]
+    pub latency_slo: Option<f64>,
+
     /// Object store file
     #[clap(short = 's', long)]
     pub object_store_file: PathBuf,

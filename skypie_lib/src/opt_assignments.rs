@@ -5,19 +5,21 @@ use crate::{
     object_store::{ObjectStore, ObjectStoreStruct},
     range::Range,
     write_choice::WriteChoice,
-    ApplicationRegion,
+    ApplicationRegion, CompatibilityChecker,
 };
 
 pub(crate) fn opt_assignments(
     write_choice: Box<WriteChoice>,
     region: &ApplicationRegion,
-) -> std::vec::IntoIter<(ObjectStore, Range)> {
+    compatibility_checker: &Box<dyn CompatibilityChecker>
+) -> std::vec::IntoIter<(ObjectStore, Range)>
+{
     debug_assert_ne!(write_choice.object_stores.len(), 0);
 
     let compat = write_choice
         .object_stores
         .into_iter()
-        .filter(|s| s.is_compatible_with(&region.region))
+        .filter(|s| compatibility_checker.is_compatible(s, region))
         .collect_vec();
 
     let vec = match compat.len() {
@@ -98,7 +100,7 @@ mod tests {
         object_store::{Cost, ObjectStore, ObjectStoreStruct},
         range::Range,
         region::Region,
-        write_choice::WriteChoice,
+        write_choice::WriteChoice, compatibility_checker::{CompatibilityChecker, self},
     };
 
     use super::opt_assignments;
@@ -157,8 +159,10 @@ mod tests {
             egress_cost: HashMap::default(),
             ingress_cost: HashMap::default(),
         };
+
+        let compatibility_checker: Box::<dyn CompatibilityChecker> = Box::new(crate::compatibility_checker::DefaultCompatibilityChecker{});
         let res: Vec<(ObjectStore, Range)> =
-            opt_assignments(Box::<WriteChoice>::new(write_choice), &region)
+            opt_assignments(Box::<WriteChoice>::new(write_choice), &region, &compatibility_checker)
                 .sorted_by(|(a, _), (b, _)| Ord::cmp(&a.id, &b.id))
                 .collect();
         res.iter()

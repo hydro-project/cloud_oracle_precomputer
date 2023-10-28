@@ -2,7 +2,7 @@ import subprocess
 from skypie import *
 import numpy as np
 
-def load_args(*, dsize=1000, use_clarkson=False, optimizerThreads=1, verbose_=0, optimizer="InteriorPoint"):
+def load_args(*, dsize=1000, use_clarkson=False, optimizerThreads=1, verbose_=0, optimizer="PrimalSimplex"):
     global algoArgs, optimizerType, useClarkson, verbose
 
     #verbose_ = 3

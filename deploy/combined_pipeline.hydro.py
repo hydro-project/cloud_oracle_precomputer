@@ -91,9 +91,11 @@ class Experiment:
     object_store_selector: str = ""
     experiment_name: "str|None" = None
     experiment_dir_full: str = "" # This is set in __post_init__
-    optimizer: str = "InteriorPoint",
+    optimizer: str = "PrimalSimplex"
     use_clarkson: bool = False
     output_candidates: bool = False
+    latency_slo: float = None
+    latency_file: str = "/dev/null"
 
     def __post_init__(self):
         
@@ -111,18 +113,24 @@ class Experiment:
         else:
             friendly_region_and_object_store = friendly_region
 
+        friendly_latency_slo = f"latency_slo-{str(self.latency_slo).translate(translation_table)}" if self.latency_slo is not None else ""
+
         # Create the name of the experiment
         paths = ([self.experiment_name] if self.experiment_name is not None else []) + \
+            [friendly_latency_slo] if self.latency_slo is not None else [] + \
             [friendly_region_and_object_store, str(self.replication_factor), str(self.redundancy_elimination_workers), str(self.batch_size), str(self.optimizer), clarkson]
         self.experiment_dir_full = os.path.join(self.experiment_dir, *paths)
 
     def copy(self, **kwargs):
         kwargs = {**self.__dict__, **kwargs}
         return Experiment(**kwargs)
-
+    
+    def as_args(self,*, key, args):
+        return [self.copy(**{key:a}) for a in args]
 
     def as_replication_factors(self, min_replication_factor, max_replication_factor):
-        return [ self.copy(replication_factor=r) for r in range(min_replication_factor, max_replication_factor + 1)]
+        return self.as_args(key="replication_factor", args=range(min_replication_factor, max_replication_factor + 1))
+        #return [ self.copy(replication_factor=r) for r in range(min_replication_factor, max_replication_factor + 1)]
 
 async def precomputation(*, e: Experiment):
     print("Running experiment:", e)
@@ -138,6 +146,7 @@ async def precomputation(*, e: Experiment):
         "batch-size": e.batch_size,
         "network-file": f"{e.data_dir}/network_cost_v2.csv",
         "object-store-file": f"{e.data_dir}/storage_pricing.csv",
+        "latency-file": e.latency_file,
         "redundancy-elimination-workers": e.redundancy_elimination_workers,
         #"output_candidates": ""
         "experiment-name": e.experiment_dir_full,
@@ -145,6 +154,9 @@ async def precomputation(*, e: Experiment):
         "num-workers": num_workers,
         "optimizer": e.optimizer,
     }
+
+    if e.latency_slo is not None:
+        args["latency-slo"] = e.latency_slo
 
 
     # Convert args to a list of strings with --key=value format
@@ -218,6 +230,7 @@ async def precomputation(*, e: Experiment):
     # Send all timing information of the candidate services to the logging service
     for s in candidates_service:
         s.ports.time_output.send_to(logging_service.ports.time_input.merge())
+        s.ports.count_output.send_to(logging_service.ports.count_input.merge())
         s.ports.done_output.send_to(logging_service.ports.done_input.merge())
 
     # Send timing information of the write choices service to the logging service
@@ -258,16 +271,17 @@ async def precomputation(*, e: Experiment):
 
 def get_args(args):
     parser = argparse.ArgumentParser(description="Run the SkyPie precomputer.")
-    parser.add_argument("--replication-factor", type=int, required=True, help="The replication factor to use for the precomputation.")
-    parser.add_argument("--redundancy-elimination-workers", type=int, required=True, help="The number of workers to use for the redundancy elimination.")
-    parser.add_argument("--region-selector", type=str, required=True, help="The region selector to use for the precomputation.")
-    parser.add_argument("--experiment-name", type=str, required=True, help="The name of the experiment.")
+    parser.add_argument("--replication-factor", type=int, default=3, help="The replication factor to use for the precomputation.")
+    parser.add_argument("--redundancy-elimination-workers", type=int, default=10, help="The number of workers to use for the redundancy elimination.")
+    parser.add_argument("--region-selector", type=str, default="", help="The region selector to use for the precomputation.")
+    parser.add_argument("--experiment-name", type=str, default="", help="The name of the experiment.")
     parser.add_argument("--object-store-selector", type=str, help="The region selector to use for the precomputation.")
     parser.add_argument("--batch-size", type=int, help="The batch size to use for the precomputation.")
     parser.add_argument("--hydro-dir", type=str, help="The directory of the SkyPie precomputer hydroflow project.")
     parser.add_argument("--data-dir", type=str, help="The data directory of the supplemental files.")
     parser.add_argument("--experiment-dir", type=str, help="The base directory to store the experiment results.")
     parser.add_argument("--profile", type=str, help="The compiler profile to use, e.g., dev or release.")
+    parser.add_argument("--latency-slo", type=float, help="The latency SLO to use for the precomputation.")
 
     return parser.parse_args(args=args)
 
@@ -322,10 +336,21 @@ def build_scaling_experiments_lrs():
 
     return scaling
 
+def build_scaling_experiment_candidates():
+
+    experiments = build_scaling_experiments_lrs()
+
+    for e in experiments:
+        e.experiment_dir = os.path.join(os.getcwd(), "results", "precomputation_scaling_small_candidates")
+        e.output_candidates = True
+        e.optimizer = "PrimalSimplex"
+
+    return experiments
+
 def build_precomputation_batching_experiments(large=False):
     fixed_args = dict(
         experiment_dir = os.path.join(os.getcwd(), "results", "batch_size_scaling"),
-        redundancy_elimination_workers = (18*8-2),
+        redundancy_elimination_workers = 80,
         region_selector="aws|azure",
         object_store_selector="",
         replication_factor=3,
@@ -386,17 +411,52 @@ def build_accuracy_small_experiments():
 
     return flattened_list
 
+def build_skystore_experiments(*, latency_slos=[2.0, 4.0, 8.0]):
+    fixed_args = dict(
+        experiment_dir = os.path.join(os.getcwd(), "results", "skystore"),
+        batch_size = 200,
+        redundancy_elimination_workers = 80,
+        #redundancy_elimination_workers = 1,
+        #replication_factor = 0,
+        optimizer="PrimalSimplex",
+        use_clarkson=False,
+        #profile= "dev"
+        latency_file = os.path.join(os.getcwd(), "latency_41943040.csv")
+    )
+    
+    scaling = Experiment(region_selector="aws", **fixed_args, replication_factor=3).as_args(key="latency_slo", args=latency_slos) + \
+        Experiment(region_selector="aws", **fixed_args, replication_factor=5).as_args(key="latency_slo", args=latency_slos)
+        #Experiment(region_selector="azure", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor) + \
+        #Experiment(region_selector="azure|aws", **fixed_args).as_replication_factors(min_replication_factor, min(4, max_replication_factor))
+
+    return scaling
+
+named_experiments = {
+    "skystore": build_skystore_experiments,
+    "scaling": build_scaling_experiments,
+    "scaling_lrs": build_scaling_experiments_lrs,
+    "scaling_candidates": build_scaling_experiment_candidates,
+    "batch_size": build_precomputation_batching_experiments,
+    "cpu_scaling": build_cpu_scaling_experiments,
+    "accuracy": build_accuracy_small_experiments,
+}
+
 async def main(argv):
 
     if len(argv) > 0:
-        exp_args = {k:v for k,v in get_args(argv).__dict__.items() if v}
-        experiments = [Experiment(**exp_args)]
+        if argv[0] in named_experiments:
+            experiments = named_experiments[argv[0]]()
+        else:
+            exp_args = {k:v for k,v in get_args(argv).__dict__.items() if v}
+            experiments = [Experiment(**exp_args)]
     else:
         #experiments = build_precomputation_batching_experiments(large=False)
         #experiments = build_precomputation_batching_experiments(large=True)
         #experiments = build_cpu_scaling_experiments()
-        experiments = build_scaling_experiments()
+        #experiments = build_scaling_experiments()
         #experiments = build_accuracy_small_experiments()
+        #experiments = build_scaling_experiment_candidates()
+        experiments = build_precomputation_batching_experiments()
 
     print("Running experiments:", len(experiments))
     for experiment in experiments:

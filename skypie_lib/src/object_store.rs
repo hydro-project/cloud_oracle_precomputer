@@ -211,10 +211,6 @@ impl ObjectStoreStruct {
         })
     }
 
-    pub fn is_compatible_with(&self, _r: &Region) -> bool {
-        // ...
-        true
-    }
     // Cost of an object store for given workload
     /* pub fn cost(&self, get: &f64, egress: &Vec<f64>) -> f64 {
         self.get_cost * get + self.egress_cost * egress

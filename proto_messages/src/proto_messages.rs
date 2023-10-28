@@ -8,11 +8,9 @@ pub use protobuf_file_sink::ProtobufFileSink;
 mod messages {
     use crate::{ProtobufFileReader, ProtobufFileSink};
     use hydroflow::futures::SinkExt;
-    use numpy::{PyArrayDyn, PyArray};
     use prost::Message;
     #[cfg(feature = "python-module")]
     use pyo3::prelude::*;
-    use pyo3::{pyfunction, Python};
     use rayon::prelude::*;
     use std::{collections::HashMap, path::Path, fs};
 

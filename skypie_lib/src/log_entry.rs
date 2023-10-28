@@ -1,7 +1,7 @@
-use std::time::SystemTime;
+//use std::time::SystemTime;
 
-use chrono::{DateTime, Utc};
-use influxdb::InfluxDbWriteable;
+//use chrono::{DateTime, Utc};
+//use influxdb::InfluxDbWriteable;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash, Clone)]
@@ -10,9 +10,10 @@ pub enum SkyPieLogEntryType {
     Total,
     RedundancyElimination,
     WriteChoiceGeneration,
+    OptimalCount
 }
 
-#[derive(InfluxDbWriteable, Debug)]
+/* #[derive(InfluxDbWriteable, Debug)]
 pub struct SkyPieLogEntry {
     time: DateTime<Utc>,
     cycle_time: f64,
@@ -31,4 +32,4 @@ impl SkyPieLogEntry {
             experiment,
         }
     }
-}
+} */

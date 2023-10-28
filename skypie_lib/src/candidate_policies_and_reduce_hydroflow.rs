@@ -1,21 +1,19 @@
 use std::{collections::HashMap, path::Path};
 
-use hydroflow::{hydroflow_syntax, tokio_stream::Stream, bytes::{BytesMut, Bytes}, util::{deserialize_from_bytes, serialize_to_bytes}, futures::Sink};
+use hydroflow::{hydroflow_syntax, tokio_stream::Stream, bytes::{BytesMut, Bytes}, futures::Sink, util::{deserialize_from_bytes, serialize_to_bytes}};
 use itertools::Itertools;
 use pyo3::{Python, PyAny, Py, types::{PyModule, PyDict}};
 use skypie_proto_messages::ProtobufFileSink;
 
 use crate::{
     write_choice::WriteChoice,
-    opt_assignments::opt_assignments,
     decision::Decision,
     object_store::ObjectStore,
-    reduce_oracle_hydroflow::BatcherMap,
+    BatcherMap,
     identifier::Identifier,
     monitor::{MonitorNOOP, MonitorMovingAverage},
-    merge_policies::MergeIterator,
     ApplicationRegion,
-    log_entry::SkyPieLogEntryType, Tombstone
+    compatibility_checker::CompatibilityChecker, log_entry::SkyPieLogEntryType, opt_assignments::opt_assignments, merge_policies::MergeIterator, Tombstone
 };
 
 pub type InputType = WriteChoice;
@@ -23,7 +21,7 @@ pub type OutputType = Decision;
 pub type InputConnection = std::pin::Pin<Box<dyn Stream<Item = Result<BytesMut, std::io::Error>> + Send + Sync>>;
 pub type OutputConnection = std::pin::Pin<Box<dyn Sink<Bytes, Error = std::io::Error> + Send + Sync>>;
 
-pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<ApplicationRegion>, input: InputConnection, batch_size: usize, _experiment_name: String, output_candidates_file_name: String, output_file_name: String, object_store_id_map: HashMap<u16, ObjectStore>, time_sink: OutputConnection, done_sink: OutputConnection, worker_id: usize, optimizer: Option<String>, use_clarkson: bool) -> hydroflow::scheduled::graph::Hydroflow
+pub fn candidate_policies_reduce_hydroflow(regions: &'static Vec<ApplicationRegion>, input: InputConnection, batch_size: usize, _experiment_name: String, output_candidates_file_name: String, output_file_name: String, object_store_id_map: HashMap<u16, ObjectStore>, time_sink: OutputConnection, done_sink: OutputConnection, worker_id: usize, optimizer: Option<String>, use_clarkson: bool, compatibility_checker_slos: Box<dyn CompatibilityChecker>, count_sink: OutputConnection) -> hydroflow::scheduled::graph::Hydroflow
 {
     {
         // Validate application regions
@@ -77,7 +75,7 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
     });
     let fun: &Py<PyAny> = &*Box::leak(Box::new(fun));
 
-    type Input = crate::candidate_policies_hydroflow::OutputType;
+    type Input = Decision;
     let mut batcher = BatcherMap::<Input>::new(batch_size);
 
     let mut reduce_input_monitor = MonitorNOOP::new(1000); //MonitorMovingAverage::new(1000);
@@ -97,6 +95,8 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
         }) -> tee();
 
         time_sink = union() -> dest_sink(time_sink);
+        count_sink = dest_sink(count_sink);
+        
         // Measure the total cycle time here
         tick_duration =
             source_in -> reduce(|_, _|()) // Current tick
@@ -177,26 +177,39 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
 
                 let write_choice = Box::<WriteChoice>::new(write_choice);
                 //let mut i = 0; // for debugging
-                let assignments = regions.iter().map(|r|{
-                    // Get optimal assignments of region r
-                    let assignments = opt_assignments(write_choice.clone(), r);
-                    // Convert to (upper bound, object store) pairs 
-                    let assignments = assignments.map(|(o, range)|(range.max, o));
+                let assignments = regions.iter()
+                    .map(|r|{
+                        // Get optimal assignments of region r
+                        let assignments = opt_assignments(write_choice.clone(), r, &compatibility_checker_slos);
+                        // Convert to (upper bound, object store) pairs 
+                        let assignments = assignments.map(|(o, range)|(range.max, o));
 
-                    // Collect into vector
-                    return (r.clone(), assignments.collect::<Vec<(f64, ObjectStore)>>());
-                });
+                        // Collect into vector
+                        return (r.clone(), assignments.collect::<Vec<(f64, ObjectStore)>>());
+                    })
+                    .filter(|(_, v)|{v.len() > 0}); // Filter out empty assignments
 
                 // Merge assignments per region to candidate policies
                 // XXX: Materializing here is not necessary
                 // In HyrdoFlow, use stream of (region, upper bound, object store), then search min per region and then merge?
                 let assignments = HashMap::from_iter(assignments);
 
-                // XXX: Debug output for optimal assignments
-                /* write_choice.object_stores.iter().for_each(|o|println!("Object store: {}-{}", o.region.name, o.name));
-                assignments.iter().for_each(|(k, v)|println!("Region {}: {:?}", k.region.name, v.iter().map(|(ub, o)|format!("({}, {}-{})", ub, o.region.name, o.name)).collect::<Vec<String>>())); */
+                #[cfg(dev)]
+                println!("Assignments: {}", assignments.len());
 
-                return MergeIterator::new(write_choice, assignments);
+                // Each app region must have at least one assignment otherwise there is no feasible candidate placement
+                if assignments.len() == regions.len() {
+                    return MergeIterator::new(write_choice, assignments);
+                } else {
+                    // Print number of assignments per application region
+                    
+                    #[cfg(dev)]
+                    for (r, v) in assignments.iter() {
+                        println!("Region {}: {}", r.get_id(), v.len());
+                    }
+
+                    return MergeIterator::empty();
+                }
             } else {
                 return MergeIterator::tombstone();
             }
@@ -283,10 +296,17 @@ pub fn candidate_policies_reduce_hydroflow<'a>(regions: &'static Vec<Application
         -> unzip();
 
         optimal_duration = optimal_zip[0];
-        optimal = optimal_zip[1];
+
+        // Log number of optimal decisions with demux
+        optimal = optimal_zip[1] -> demux(|v: Vec<Decision>, var_args!(payload, count)| {
+            count.give(v.len());
+            payload.give(v);
+        });
+
+        optimal[count] -> reduce(|acc: &mut usize, d|{*acc = *acc + d}) -> map(|d|(SkyPieLogEntryType::OptimalCount, d)) -> map(|d|{serialize_to_bytes(d)}) -> count_sink;
 
         // Output optimal
-        optimal -> flatten()
+        optimal[payload] -> flatten()
             -> inspect(|_|{
                 reduce_output_monitor.add_arrival_time_now();
                 reduce_output_monitor.print("Optimal:", optimal_log_interval);

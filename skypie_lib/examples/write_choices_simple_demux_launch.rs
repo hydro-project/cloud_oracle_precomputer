@@ -51,7 +51,9 @@ async fn main() {
         &args.network_file,
         &args.object_store_file,
         &args.region_selector,
-        &args.object_store_selector
+        &args.object_store_selector,
+        &args.latency_file,
+        &args.latency_slo
     );
 
     // Get ports
