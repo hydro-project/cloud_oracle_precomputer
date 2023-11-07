@@ -7,7 +7,7 @@ use skypie_lib::{
     identifier::Identifier, object_store::ObjectStore, read_choice::ReadChoice, ApplicationRegion, Decision, WriteChoice,
 };
 
-use super::{Optimizer, OptimizerData, Workload};
+use super::{Optimizer, Workload};
 
 #[pyclass]
 #[derive(Debug)]
@@ -79,18 +79,21 @@ impl Optimizer for ProfitBasedOptimizer {
 #[pymethods]
 impl ProfitBasedOptimizer {
     #[new]
+    #[pyo3(signature = (network_file, object_store_file, object_stores_considered, application_regions_considered, latency_file_path = None, latency_slo = None))]
     pub fn new(
         network_file: &str,
         object_store_file: &str,
         object_stores_considered: Vec<&str>,
         application_regions_considered: HashMap<&str,u16>,
+        latency_file_path: Option<&str>,
+        latency_slo: Option<f64>
     ) -> Self {
 
-        let OptimizerData{object_stores, application_regions} = Self::load(network_file, object_store_file, object_stores_considered, application_regions_considered);
+        let loader = Self::load(network_file, object_store_file, object_stores_considered, application_regions_considered, latency_file_path, &latency_slo);
 
         Self {
-            object_stores,
-            application_regions,
+            object_stores: loader.object_stores,
+            application_regions: loader.app_regions,
         }
     }
 

@@ -61,6 +61,10 @@ impl Cost {
         *self.ingress_cost.get(&region.region).unwrap() + region.get_egress_cost(object_store_region)
     }
 
+    pub fn get_migration_cost(&self, src_region: &Region, dst_object_store: &ObjectStore) -> f64 {
+        *self.egress_cost.get(&dst_object_store.region).unwrap() + dst_object_store.cost.ingress_cost.get(src_region).unwrap()
+    }
+
     pub fn compute_read_costs(&self, region: &ApplicationRegion, object_store_region: &Region, gets: f64, egress: f64) -> f64 {
         let egress_costs = self.get_egress_cost(region, object_store_region);
         self.get_cost * gets + egress_costs * egress
@@ -277,8 +281,16 @@ impl ObjectStoreStruct {
         self.cost.get_ingress_cost(region, &self.region)
     }
 
+    pub fn get_migration_cost(&self, object_store: &ObjectStore) -> f64 {
+        self.cost.get_migration_cost(&self.region, object_store)
+    }
+
     pub fn compute_read_costs(&self, region: &ApplicationRegion, gets: f64, egress: f64) -> f64 {
         self.cost.compute_read_costs(region, &self.region, gets, egress)
+    }
+
+    pub fn fully_qualified_name(&self) -> String {
+        format!("{}-{}", self.region.name, self.name)
     }
 }
 

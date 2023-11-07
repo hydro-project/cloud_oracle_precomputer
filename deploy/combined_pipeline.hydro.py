@@ -117,7 +117,7 @@ class Experiment:
 
         # Create the name of the experiment
         paths = ([self.experiment_name] if self.experiment_name is not None else []) + \
-            [friendly_latency_slo] if self.latency_slo is not None else [] + \
+            ([friendly_latency_slo] if self.latency_slo is not None else []) + \
             [friendly_region_and_object_store, str(self.replication_factor), str(self.redundancy_elimination_workers), str(self.batch_size), str(self.optimizer), clarkson]
         self.experiment_dir_full = os.path.join(self.experiment_dir, *paths)
 
@@ -424,8 +424,11 @@ def build_skystore_experiments(*, latency_slos=[2.0, 4.0, 8.0]):
         latency_file = os.path.join(os.getcwd(), "latency_41943040.csv")
     )
     
-    scaling = Experiment(region_selector="aws", **fixed_args, replication_factor=3).as_args(key="latency_slo", args=latency_slos) + \
-        Experiment(region_selector="aws", **fixed_args, replication_factor=5).as_args(key="latency_slo", args=latency_slos)
+    scaling = Experiment(region_selector="aws", **fixed_args, replication_factor=8).as_args(key="latency_slo", args=latency_slos) + \
+        Experiment(region_selector="aws", **fixed_args, replication_factor=10).as_args(key="latency_slo", args=latency_slos)
+        #Experiment(region_selector="aws", **fixed_args, replication_factor=1).as_args(key="latency_slo", args=latency_slos) + \
+        #Experiment(region_selector="aws", **fixed_args, replication_factor=3).as_args(key="latency_slo", args=latency_slos) + \
+        #Experiment(region_selector="aws", **fixed_args, replication_factor=5).as_args(key="latency_slo", args=latency_slos)
         #Experiment(region_selector="azure", **fixed_args).as_replication_factors(min_replication_factor, max_replication_factor) + \
         #Experiment(region_selector="azure|aws", **fixed_args).as_replication_factors(min_replication_factor, min(4, max_replication_factor))
 
@@ -457,6 +460,7 @@ async def main(argv):
         #experiments = build_accuracy_small_experiments()
         #experiments = build_scaling_experiment_candidates()
         experiments = build_precomputation_batching_experiments()
+        #experiments = build_skystore_experiments()
 
     print("Running experiments:", len(experiments))
     for experiment in experiments:

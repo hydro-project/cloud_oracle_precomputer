@@ -1,12 +1,7 @@
 use std::{collections::HashMap, path::PathBuf};
-use skypie_lib::{object_store::ObjectStore, ApplicationRegion, Loader, Region, Decision, identifier::Identifier};
+use skypie_lib::{Loader, Region, Decision, identifier::Identifier};
 
 use crate::Workload;
-
-pub(crate) struct OptimizerData {
-    pub object_stores: Vec<ObjectStore>,
-    pub application_regions: Vec<ApplicationRegion>,
-}
 
 pub(crate) trait Optimizer {
     fn load(
@@ -14,22 +9,19 @@ pub(crate) trait Optimizer {
         object_store_file: &str,
         object_stores_considered: Vec<&str>,
         application_regions_considered: HashMap<&str,u16>,
-    ) -> OptimizerData {
+        latency_file_path: Option<&str>,
+        latency_slo: &Option<f64>
+    ) -> Loader {
 
         let network_file = PathBuf::from(network_file);
         let object_store_file = PathBuf::from(object_store_file);
         let object_stores_considered = object_stores_considered.into_iter().map(|o| o.to_string()).collect::<Vec<_>>();
         let region_list = application_regions_considered.into_iter().map(|(name, id)| Region{id, name: name.to_string()}).collect::<Vec<_>>();
+        let latency_file_path = latency_file_path.as_ref().map(|s| PathBuf::from(s));
         
-        let loader = Loader::with_region_and_object_store_names(&network_file, &object_store_file, region_list, &object_stores_considered);
+        let loader = Loader::with_region_and_object_store_names(&network_file, &object_store_file, region_list, &object_stores_considered, &latency_file_path, latency_slo);
         
-        let object_stores = loader.object_stores;
-        let application_regions = loader.app_regions;
-
-        OptimizerData {
-            object_stores,
-            application_regions,
-        }
+        loader
     }
 
     fn cost(&self, workload: &Workload, placement: &Decision) -> f64 {

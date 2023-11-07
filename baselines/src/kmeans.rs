@@ -5,7 +5,6 @@ use pyo3::types::PyList;
 use rayon::prelude::IntoParallelRefIterator;
 use rayon::iter::ParallelIterator;
 use skypie_lib::identifier::Identifier;
-use skypie_lib::write_choice;
 use std::collections::HashMap;
 
 use skypie_lib::{
@@ -13,7 +12,7 @@ use skypie_lib::{
     Decision, WriteChoice,
 };
 
-use super::optimizer::{Optimizer, OptimizerData};
+use super::optimizer::Optimizer;
 use super::workload::Workload;
 
 #[pyclass]
@@ -36,7 +35,7 @@ pub struct KmeansOptimizer {
 #[pymethods]
 impl KmeansOptimizer {
     #[new]
-    #[pyo3(signature = (network_file, object_store_file, object_stores_considered, application_regions_considered, num_replicas, max_iterations = 100, verbose = 0, threshold = 0.1, max_num_replicas = None))]
+    #[pyo3(signature = (network_file, object_store_file, object_stores_considered, application_regions_considered, num_replicas, max_iterations = 100, verbose = 0, threshold = 0.1, max_num_replicas = None, latency_file_path = None, latency_slo = None))]
     pub fn new(
         network_file: &str,
         object_store_file: &str,
@@ -46,7 +45,9 @@ impl KmeansOptimizer {
         max_iterations: usize,
         verbose: usize,
         threshold: f32,
-        max_num_replicas: Option<usize>
+        max_num_replicas: Option<usize>,
+        latency_file_path: Option<&str>,
+        latency_slo: Option<f64>
     ) -> Self {
         let max_num_replicas = max_num_replicas.unwrap_or(num_replicas);
         if num_replicas == 0 {
@@ -56,19 +57,18 @@ impl KmeansOptimizer {
             panic!("num_replicas must be smaller than max_num_replicas");
         }
 
-        let OptimizerData {
-            object_stores,
-            application_regions,
-        } = Self::load(
+        let loader = Self::load(
             network_file,
             object_store_file,
             object_stores_considered,
             application_regions_considered,
+            latency_file_path,
+            &latency_slo
         );
 
-        let mut application_regions = application_regions;
+        let mut application_regions = loader.app_regions;
         application_regions.sort_by_key(|a|a.get_id());
-        let mut object_stores = object_stores;
+        let mut object_stores = loader.object_stores;
         object_stores.sort_by_key(|o|o.get_id());
         let s_capital = Vec::from_iter(0..object_stores.len()); //[0..object_stores.len()];
         let c_capital = Vec::from_iter(0..application_regions.len());
@@ -196,7 +196,7 @@ impl KmeansOptimizer {
         let mut new_cost = self.cost_read(&c_capital, &g_capital, &get_costs_o_c);
         //12: repeat
         let mut cg = HashMap::new();
-        for i in 0..self.max_iterations {
+        for _i in 0..self.max_iterations {
             #[cfg(dev)] {
                 println!("K-means iteration {}/{}", i+1, self.max_iterations);
             }

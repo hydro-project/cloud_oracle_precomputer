@@ -11,6 +11,7 @@ use regex::Regex;
 pub struct Loader {
     pub object_stores: Vec<ObjectStore>,
     pub app_regions: Vec<ApplicationRegion>,
+    pub network_latency: LatencyMaps,
     pub compatibility_checker_slos: Box<dyn CompatibilityChecker>,
 }
 
@@ -51,38 +52,49 @@ impl Loader {
 
 
         // Load network latency and compatibility checker
-        let (compatibility_checker, region_names_with_latency_data) = Loader::load_latency(latency_file_path, latency_slo, &region_names);
+        let (network_latency, region_names, regions, network_egress, network_ingress) = if let Some(latency_file_path) = latency_file_path {
+            assert!(latency_file_path.exists());
+
+            let (network_latency, region_names_with_latency_data) = Loader::load_latency(&latency_file_path, &region_names);
+
+            // Align network regions with regions that have latency data: filter out regions without latency data and update region IDs
+            let network_egress = network_egress.into_iter().filter(|(region, _costs)|region_names_with_latency_data.contains_key(&region.name)).map(|(region, costs)|{
+                let region = region_names_with_latency_data.get(&region.name).unwrap().clone();
+                // Translate costs
+                let costs = costs.into_iter()
+                    .filter(|(region, _cost)|region_names_with_latency_data.contains_key(&region.name))
+                    .map(|(region, cost)|{
+                        let region = region_names_with_latency_data.get(&region.name).unwrap().clone();
+                        (region, cost)
+                    }).collect::<HashMap<Region, f64>>();
+
+                (region, costs)
+            }).collect::<NetworkCostMaps>();
+            let network_ingress = network_ingress.into_iter().filter(|(region, _costs)|region_names_with_latency_data.contains_key(&region.name)).map(|(region, costs)|{
+                let region = region_names_with_latency_data.get(&region.name).unwrap().clone();
+                // Translate costs
+                let costs = costs.into_iter()
+                    .filter(|(region, _cost)|region_names_with_latency_data.contains_key(&region.name))
+                    .map(|(region, cost)|{
+                        let region = region_names_with_latency_data.get(&region.name).unwrap().clone();
+                        (region, cost)
+                    }).collect::<HashMap<Region, f64>>();
+
+                (region, costs)
+            }).collect::<NetworkCostMaps>();
+
+            let region_names = region_names_with_latency_data;
+            let regions = region_names.values().map(|r|r.clone()).collect_vec();
+
+            (network_latency, region_names, regions, network_egress, network_ingress)
+        } else {
+            (LatencyMaps::new(), region_names, regions, network_egress, network_ingress)
+        };
+
+        assert!(region_names.len() > 0);
         
-        assert!(region_names_with_latency_data.len() > 0);
-
-        // Align network regions with regions that have latency data: filter out regions without latency data and update region IDs
-        let network_egress = network_egress.into_iter().filter(|(region, _costs)|region_names_with_latency_data.contains_key(&region.name)).map(|(region, costs)|{
-            let region = region_names_with_latency_data.get(&region.name).unwrap().clone();
-            // Translate costs
-            let costs = costs.into_iter()
-                .filter(|(region, _cost)|region_names_with_latency_data.contains_key(&region.name))
-                .map(|(region, cost)|{
-                    let region = region_names_with_latency_data.get(&region.name).unwrap().clone();
-                    (region, cost)
-                }).collect::<HashMap<Region, f64>>();
-
-            (region, costs)
-        }).collect::<NetworkCostMaps>();
-        let network_ingress = network_ingress.into_iter().filter(|(region, _costs)|region_names_with_latency_data.contains_key(&region.name)).map(|(region, costs)|{
-            let region = region_names_with_latency_data.get(&region.name).unwrap().clone();
-            // Translate costs
-            let costs = costs.into_iter()
-                .filter(|(region, _cost)|region_names_with_latency_data.contains_key(&region.name))
-                .map(|(region, cost)|{
-                    let region = region_names_with_latency_data.get(&region.name).unwrap().clone();
-                    (region, cost)
-                }).collect::<HashMap<Region, f64>>();
-
-            (region, costs)
-        }).collect::<NetworkCostMaps>();
-
-        let region_names = region_names_with_latency_data;
-        let regions = region_names.values().map(|r|r.clone()).collect_vec();
+        let compatibility_checker = Self::load_compatibility_checker(network_latency.clone(), latency_slo);
+        
         
         let object_stores = Loader::load_object_stores(object_store_file_path, &network_egress, &network_ingress, &region_names, object_store_pattern, object_store_list);
 
@@ -116,79 +128,89 @@ impl Loader {
         Loader {
             object_stores,
             app_regions,
+            network_latency,
             compatibility_checker_slos: compatibility_checker
         }
     }
 
-    fn load_latency(
-        latency_file_path: &Option<PathBuf>,
-        network_slo: &Option<f64>,
+    pub fn load_latency(
+        latency_file_path: &PathBuf,
         region_names: &HashMap<String, Region>
-    ) ->  (Box<dyn CompatibilityChecker>, HashMap<String, Region>) {
+    ) -> (LatencyMaps, HashMap<String, Region>) {
 
-        if let Some(network_slo) = network_slo {
+        let rdr2 = csv::Reader::from_path(latency_file_path).unwrap();
+        let iter2: csv::DeserializeRecordsIntoIter<std::fs::File, LatencyRecordRaw> =
+            rdr2.into_deserialize();
 
-            let latency_file_path = latency_file_path.as_ref().expect("Must specify latency file path when specifying latency SLO");
-
-            let rdr2 = csv::Reader::from_path(latency_file_path).unwrap();
-            let iter2: csv::DeserializeRecordsIntoIter<std::fs::File, LatencyRecordRaw> =
-                rdr2.into_deserialize();
-
-            let network_latency: LatencyMaps = iter2.map(|x| {
-                    // Convert to LatencyRecord
-                    let mut l: LatencyRecord = x.unwrap().into();
+        let network_latency: LatencyMaps = iter2.filter_map(|x| {
+                // Convert to LatencyRecord
+                let mut l: LatencyRecord = x.unwrap().into();
+                if region_names.contains_key(&l.src.name) && region_names.contains_key(&l.dest.name) {
                     // Translate region names to region IDs
                     l.src = region_names.get(&l.src.name).unwrap().clone();
                     l.dest = region_names.get(&l.dest.name).unwrap().clone();
-                    l
-                })
-                // Translate into LatencyMap (HashMap<Region, f64>) of source regions
-                .group_by(|x|x.src.clone()).into_iter().map(|(key, group)|{
-                    let latency_map: LatencyMap = group.map(|l|(l.dest, l.latency)).collect();
-                    (key, latency_map)
-                }).collect();
-
-            // Align considered regions with available latency data
-            let missing_source_latency: HashSet<_> = region_names.values().filter(|r|!network_latency.contains_key(r)).collect();
-            let missing_source_dest_latency =
-                region_names.values().flat_map(|r| {
-                    region_names.values().filter(|r2|network_latency.contains_key(r) && ! network_latency.get(r).unwrap().contains_key(r2)).map(|x|(r.clone(), x.clone()))
-                }).collect_vec();
-            
-            if missing_source_latency.len() > 0 {
-                println!("Missing source latency for regions: {:?}", missing_source_latency);
-            }
-            if missing_source_dest_latency.len() > 0 {
-                println!("Missing source/dest latency for regions: {:?}", missing_source_dest_latency);
-            }
-
-            let missing_dest_latency: HashSet<_> = missing_source_dest_latency.iter().map(|(_src, dest)|dest).collect();
-
-            // Recompute region ids for regions with latency data
-            let regions_with_latency: HashMap<String, Region> = region_names.into_iter()
-                .filter(|(_name, r)|!missing_source_latency.contains(r) && !missing_dest_latency.contains(r))
-                .map(|(n ,r)|(n.clone(), r.clone()))
-                .sorted_by_key(|(name, _region)|name.clone())
-                .enumerate()
-                .map(|(i, (name, mut region))|{
-                    region.id = i as u16;
-                    (name, region)
-                })
-                .collect();
-
-            // Update region IDs in network latency data
-            let network_latency: LatencyMaps = network_latency.into_iter().map(|(src, latency_map)|{
-                let src = regions_with_latency.get(&src.name).unwrap().clone();
-                let latency_map: LatencyMap = latency_map.into_iter().map(|(dest, latency)|{
-                    let dest = regions_with_latency.get(&dest.name).unwrap().clone();
-                    (dest, latency)
-                }).collect();
-                (src, latency_map)
+                    Some(l)
+                } else {
+                    None
+                }
+            })
+            // Translate into LatencyMap (HashMap<Region, f64>) of source regions
+            .group_by(|x|x.src.clone()).into_iter().map(|(key, group)|{
+                let latency_map: LatencyMap = group.map(|l|(l.dest, l.latency)).collect();
+                (key, latency_map)
             }).collect();
 
-            (Box::new(CompatibilityCheckerNetworkSLOs::new(network_latency, *network_slo)), regions_with_latency)
+        // Align considered regions with available latency data
+        let missing_source_latency: HashSet<_> = region_names.values().filter(|r|!network_latency.contains_key(r)).collect();
+        let missing_source_dest_latency =
+            region_names.values().flat_map(|r| {
+                region_names.values().filter(|r2|network_latency.contains_key(r) && ! network_latency.get(r).unwrap().contains_key(r2)).map(|x|(r.clone(), x.clone()))
+            }).collect_vec();
+        
+        if missing_source_latency.len() > 0 {
+            println!("Missing source latency for regions: {:?}", missing_source_latency);
+        }
+        if missing_source_dest_latency.len() > 0 {
+            println!("Missing source/dest latency for regions: {:?}", missing_source_dest_latency);
+        }
+
+        let missing_dest_latency: HashSet<_> = missing_source_dest_latency.iter().map(|(_src, dest)|dest).collect();
+
+        // Recompute region ids for regions with latency data
+        let regions_with_latency: HashMap<String, Region> = region_names.into_iter()
+            .filter(|(_name, r)|!missing_source_latency.contains(r) && !missing_dest_latency.contains(r))
+            .map(|(n ,r)|(n.clone(), r.clone()))
+            .sorted_by_key(|(name, _region)|name.clone())
+            .enumerate()
+            .map(|(i, (name, mut region))|{
+                region.id = i as u16;
+                (name, region)
+            })
+            .collect();
+
+        // Update region IDs in network latency data
+        let network_latency: LatencyMaps = network_latency.into_iter().map(|(src, latency_map)|{
+            let src = regions_with_latency.get(&src.name).unwrap().clone();
+            let latency_map: LatencyMap = latency_map.into_iter().map(|(dest, latency)|{
+                let dest = regions_with_latency.get(&dest.name).unwrap().clone();
+                (dest, latency)
+            }).collect();
+            (src, latency_map)
+        }).collect();
+
+        return (network_latency, regions_with_latency);
+    }
+
+    fn load_compatibility_checker(
+        network_latency: LatencyMaps,
+        network_slo: &Option<f64>,
+    ) ->  Box<dyn CompatibilityChecker> {
+
+        if let Some(network_slo) = network_slo {
+
+            Box::new(CompatibilityCheckerNetworkSLOs::new(network_latency, *network_slo))
         } else {
-            (Box::new(DefaultCompatibilityChecker{}), region_names.clone())
+            Box::new(DefaultCompatibilityChecker{})
         }
     }
 
@@ -302,7 +324,12 @@ impl Loader {
     }
 
     fn load_object_stores(object_store_file_path: &PathBuf, egress_costs: &NetworkCostMaps, ingress_costs: &NetworkCostMaps, region_names: &HashMap<String, Region>, object_store_pattern: Option<&str>, object_store_list: Option<&Vec<String>>) -> Vec<ObjectStore> {
-        let object_store_regex = Regex::new(object_store_pattern.unwrap_or("")).unwrap();
+        let object_store_regex = if object_store_list.is_none() {
+            Regex::new(object_store_pattern.unwrap_or("")).unwrap()
+        } else {
+            // Do not filter by regex if object store list is specified
+            Regex::new("XXXXXXX").unwrap()
+        };
 
         let default_vec = vec![];
         let object_store_set:HashSet<&String> = HashSet::from_iter(object_store_list.unwrap_or(&default_vec));
