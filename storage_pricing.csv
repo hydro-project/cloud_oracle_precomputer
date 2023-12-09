@@ -560,7 +560,7 @@ azure,switzerlandwest,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.003575
 azure,westus2,Block Blob,get request,Premium,0.0,inf,requests,1.4e-07
 azure,southeastasia,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
 azure,brazilsouth,Block Blob v2,put request,Premium,0.0,inf,requests,4.55e-06
-azure,germanynorth,Block Blob v2,put request,Premium,0.0,inf,requests,3.0300000000000002e-06
+azure,germanynorth,Block Blob v2,put request,Premium,0.0,inf,requests,3.03e-06
 azure,southafricanorth,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
 azure,westus3,Block Blob v2,put request,Premium,0.0,inf,requests,2.28e-06
 azure,jioindiacentral,Blob Storage,put request,Hot,0.0,inf,requests,5.5e-06
@@ -572,19 +572,19 @@ azure,usgovvirginia,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.188
 azure,brazilsoutheast,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.00325
 azure,swedencentral,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.15
 azure,westcentralus,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
-azure,francecentral,Block Blob,put request,Premium,0.0,inf,requests,2.1899999999999998e-06
+azure,francecentral,Block Blob,put request,Premium,0.0,inf,requests,2.19e-06
 azure,southafricanorth,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.00335
 azure,qatarcentral,Block Blob v2,get request,Premium,0.0,inf,requests,2.41e-07
 azure,usgovvirginia,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
 azure,northcentralus,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
-azure,ukwest,Block Blob v2,put request,Premium,0.0,inf,requests,2.8500000000000002e-06
+azure,ukwest,Block Blob v2,put request,Premium,0.0,inf,requests,2.85e-06
 azure,southcentralus,Block Blob v2,get request,Premium,0.0,inf,requests,2.1800000000000002e-07
 azure,attatlanta1,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.01
 azure,westus2,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
 azure,swedencentral,Blob Storage,put request,Hot,0.0,inf,requests,5e-06
 azure,centralindia,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.21
-azure,francesouth,Block Blob v2,put request,Premium,0.0,inf,requests,3.6900000000000002e-06
-azure,norwaywest,Block Blob v2,get request,Premium,0.0,inf,requests,3.3800000000000004e-07
+azure,francesouth,Block Blob v2,put request,Premium,0.0,inf,requests,3.69e-06
+azure,norwaywest,Block Blob v2,get request,Premium,0.0,inf,requests,3.380000000000001e-07
 azure,eastasia,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
 azure,eastus2,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.01
 azure,ukwest,Blob Storage,get request,Cool,0.0,inf,requests,1.0999999999999998e-06
@@ -594,7 +594,7 @@ azure,eastus2,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.017664
 azure,eastus2,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0184
 azure,eastus2,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.016928
 azure,usgovtexas,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
-azure,westindia,Block Blob,get request,Premium,0.0,inf,requests,2.0999999999999997e-07
+azure,westindia,Block Blob,get request,Premium,0.0,inf,requests,2.1000000000000003e-07
 azure,westeurope,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0196
 azure,westeurope,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.018816
 azure,westeurope,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.018032
@@ -605,7 +605,7 @@ azure,westus3,Block Blob,get request,Premium,0.0,inf,requests,1.4e-07
 azure,westindia,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.225
 azure,southeastasia,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.195
 azure,westcentralus,Block Blob v2,put request,Premium,0.0,inf,requests,2.73e-06
-azure,uaecentral,Block Blob,put request,Premium,0.0,inf,requests,3.2500000000000002e-06
+azure,uaecentral,Block Blob,put request,Premium,0.0,inf,requests,3.25e-06
 azure,koreacentral,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.203
 azure,southafricawest,Block Blob,get request,Premium,0.0,inf,requests,2.66e-07
 azure,attatlanta1,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
@@ -633,7 +633,7 @@ azure,canadacentral,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
 azure,westus3,Block Blob v2,get request,Premium,0.0,inf,requests,1.82e-07
 azure,southeastasia,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.195
 azure,uaecentral,Blob Storage,get request,Hot,0.0,inf,requests,5.590000000000001e-07
-azure,usgovtexas,Block Blob,put request,Premium,0.0,inf,requests,2.1899999999999998e-06
+azure,usgovtexas,Block Blob,put request,Premium,0.0,inf,requests,2.19e-06
 azure,eastus,Block Blob v2,put request,Premium,0.0,inf,requests,2.28e-06
 azure,centralus,Block Blob,get request,Premium,0.0,inf,requests,1.68e-07
 azure,brazilsouth,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
@@ -693,7 +693,7 @@ azure,westeurope,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
 azure,japanwest,Block Blob v2,put request,Premium,0.0,inf,requests,3.52e-06
 azure,usgovarizona,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
 azure,northeurope,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.01
-azure,westindia,Block Blob,put request,Premium,0.0,inf,requests,2.6300000000000002e-06
+azure,westindia,Block Blob,put request,Premium,0.0,inf,requests,2.63e-06
 azure,japanwest,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.011
 azure,japaneast,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
 azure,ukwest,Blob Storage,put request,Cool,0.0,inf,requests,1.1e-05
@@ -716,7 +716,7 @@ azure,koreasouth,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
 azure,koreasouth,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
 azure,eastus2,Block Blob,get request,Premium,0.0,inf,requests,1.4e-07
 azure,koreasouth,Block Blob v2,put request,Premium,0.0,inf,requests,3.0700000000000003e-06
-azure,usgovvirginia,Block Blob v2,put request,Premium,0.0,inf,requests,2.8500000000000002e-06
+azure,usgovvirginia,Block Blob v2,put request,Premium,0.0,inf,requests,2.85e-06
 azure,canadacentral,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
 azure,australiaeast,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.02
 azure,australiaeast,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.0184
@@ -724,9 +724,9 @@ azure,australiaeast,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.0192
 azure,eastus,Block Blob,put request,Premium,0.0,inf,requests,1.7500000000000002e-06
 azure,jioindiawest,Blob Storage,put request,Hot,0.0,inf,requests,5.5e-06
 azure,southeastasia,Block Blob,put request,Premium,0.0,inf,requests,2.28e-06
-azure,southafricawest,Block Blob v2,get request,Premium,0.0,inf,requests,2.4199999999999997e-07
+azure,southafricawest,Block Blob v2,get request,Premium,0.0,inf,requests,2.42e-07
 azure,attdallas1,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
-azure,centralindia,Block Blob,get request,Premium,0.0,inf,requests,1.9599999999999998e-07
+azure,centralindia,Block Blob,get request,Premium,0.0,inf,requests,1.96e-07
 azure,japanwest,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.0192
 azure,japanwest,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.0184
 azure,japanwest,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.02
@@ -734,8 +734,8 @@ azure,switzerlandwest,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.0143
 azure,brazilsoutheast,Block Blob,get request,Premium,0.0,inf,requests,3.64e-07
 azure,koreacentral,Block Blob,put request,Premium,0.0,inf,requests,2.36e-06
 azure,southindia,Blob Storage,put request,Hot,0.0,inf,requests,5e-06
-azure,usgovvirginia,Block Blob,put request,Premium,0.0,inf,requests,2.1899999999999998e-06
-azure,norwayeast,Blob Storage,get request,Hot,0.0,inf,requests,4.7299999999999996e-07
+azure,usgovvirginia,Block Blob,put request,Premium,0.0,inf,requests,2.19e-06
+azure,norwayeast,Blob Storage,get request,Hot,0.0,inf,requests,4.73e-07
 azure,germanywestcentral,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.01
 azure,australiasoutheast,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
 azure,westeurope,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
@@ -757,16 +757,16 @@ azure,germanynorth,Blob Storage,put request,Hot,0.0,inf,requests,7.02e-06
 azure,attatlanta1,Block Blob v2,put request,Premium,0.0,inf,requests,2.28e-06
 azure,eastasia,Block Blob,put request,Premium,0.0,inf,requests,2.71e-06
 azure,southafricanorth,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.219
-azure,usgovarizona,Block Blob v2,put request,Premium,0.0,inf,requests,2.8500000000000002e-06
+azure,usgovarizona,Block Blob v2,put request,Premium,0.0,inf,requests,2.85e-06
 azure,eastasia,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
 azure,westcentralus,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
 azure,swedencentral,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.016928
 azure,swedencentral,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0184
 azure,swedencentral,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.017664
-azure,norwaywest,Block Blob,put request,Premium,0.0,inf,requests,3.2599999999999997e-06
+azure,norwaywest,Block Blob,put request,Premium,0.0,inf,requests,3.26e-06
 azure,norwaywest,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.0143
 azure,japaneast,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.218
-azure,koreasouth,Block Blob,get request,Premium,0.0,inf,requests,1.8899999999999999e-07
+azure,koreasouth,Block Blob,get request,Premium,0.0,inf,requests,1.89e-07
 azure,eastus,Block Blob v2,get request,Premium,0.0,inf,requests,1.82e-07
 azure,koreacentral,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
 azure,francesouth,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.00364
@@ -776,10 +776,10 @@ azure,uaenorth,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.019464
 azure,uaenorth,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.020275
 azure,uaenorth,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.018653
 azure,eastus2,Blob Storage,put request,Hot,0.0,inf,requests,5e-06
-azure,francesouth,Blob Storage,put request,Cool,0.0,inf,requests,1.4299999999999999e-05
+azure,francesouth,Blob Storage,put request,Cool,0.0,inf,requests,1.43e-05
 azure,centralindia,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
 azure,jioindiacentral,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
-azure,canadaeast,Block Blob,put request,Premium,0.0,inf,requests,2.1000000000000002e-06
+azure,canadaeast,Block Blob,put request,Premium,0.0,inf,requests,2.1e-06
 azure,australiasoutheast,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
 azure,westindia,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.0152
 azure,australiacentral,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
@@ -803,8 +803,8 @@ azure,norwaywest,Blob Storage,get request,Cool,0.0,inf,requests,1.43e-06
 azure,canadacentral,Blob Storage,get request,Hot,0.0,inf,requests,4.4e-07
 azure,usgovtexas,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.188
 azure,francesouth,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.0143
-azure,uksouth,Block Blob v2,put request,Premium,0.0,inf,requests,2.8500000000000002e-06
-azure,germanynorth,Blob Storage,put request,Cool,0.0,inf,requests,1.3000000000000001e-05
+azure,uksouth,Block Blob v2,put request,Premium,0.0,inf,requests,2.85e-06
+azure,germanynorth,Blob Storage,put request,Cool,0.0,inf,requests,1.3e-05
 azure,canadaeast,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
 azure,southcentralus,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.18
 azure,koreasouth,Block Blob v2,get request,Premium,0.0,inf,requests,2.46e-07
@@ -822,7 +822,7 @@ azure,francecentral,Block Blob,get request,Premium,0.0,inf,requests,1.75e-07
 azure,swedencentral,Block Blob,put request,Premium,0.0,inf,requests,1.7500000000000002e-06
 azure,australiacentral2,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.272
 azure,eastus,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
-azure,southafricawest,Block Blob v2,put request,Premium,0.0,inf,requests,3.0300000000000002e-06
+azure,southafricawest,Block Blob v2,put request,Premium,0.0,inf,requests,3.03e-06
 azure,westeurope,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
 azure,germanywestcentral,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
 azure,canadaeast,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.011
@@ -833,7 +833,7 @@ azure,usgovvirginia,Block Blob v2,get request,Premium,0.0,inf,requests,2.28e-07
 azure,francecentral,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.188
 azure,switzerlandnorth,Blob Storage,get request,Cool,0.0,inf,requests,1.0999999999999998e-06
 azure,brazilsoutheast,Blob Storage,get request,Hot,0.0,inf,requests,7.28e-07
-azure,centralus,Block Blob,put request,Premium,0.0,inf,requests,2.1000000000000002e-06
+azure,centralus,Block Blob,put request,Premium,0.0,inf,requests,2.1e-06
 azure,germanywestcentral,Block Blob v2,get request,Premium,0.0,inf,requests,2.3700000000000002e-07
 azure,japaneast,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
 azure,swedencentral,Block Blob v2,put request,Premium,0.0,inf,requests,2.96e-06
@@ -843,18 +843,18 @@ azure,australiacentral,Block Blob,get request,Premium,0.0,inf,requests,2.54e-07
 azure,westus2,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
 azure,germanynorth,Blob Storage,get request,Cool,0.0,inf,requests,1.2999999999999998e-06
 azure,westindia,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
-azure,australiacentral2,Block Blob,put request,Premium,0.0,inf,requests,3.1699999999999997e-06
+azure,australiacentral2,Block Blob,put request,Premium,0.0,inf,requests,3.17e-06
 azure,australiacentral2,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.02
 azure,australiacentral2,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.0192
 azure,australiacentral2,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.0184
 azure,usgovtexas,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
 azure,australiacentral,Blob Storage,get request,Hot,0.0,inf,requests,4.4e-07
 azure,uaecentral,Block Blob,get request,Premium,0.0,inf,requests,2.6e-07
-azure,southindia,Block Blob v2,get request,Premium,0.0,inf,requests,2.7299999999999997e-07
+azure,southindia,Block Blob v2,get request,Premium,0.0,inf,requests,2.73e-07
 azure,eastus,Block Blob,get request,Premium,0.0,inf,requests,1.4e-07
 azure,westus,Blob Storage,put request,Hot,0.0,inf,requests,5.5e-06
 azure,norwaywest,Blob Storage,put request,Hot,0.0,inf,requests,7.72e-06
-azure,northcentralus,Block Blob,put request,Premium,0.0,inf,requests,2.1000000000000002e-06
+azure,northcentralus,Block Blob,put request,Premium,0.0,inf,requests,2.1e-06
 azure,uksouth,Blob Storage,get request,Cool,0.0,inf,requests,1.0999999999999998e-06
 azure,southeastasia,Block Blob v2,put request,Premium,0.0,inf,requests,2.96e-06
 azure,brazilsouth,Blob Storage,put request,Hot,0.0,inf,requests,7.000000000000001e-06
@@ -874,13 +874,13 @@ azure,westus,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.195
 azure,usgovtexas,Block Blob v2,get request,Premium,0.0,inf,requests,2.28e-07
 azure,westcentralus,Block Blob,get request,Premium,0.0,inf,requests,1.68e-07
 azure,brazilsouth,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.3
-azure,uksouth,Block Blob,put request,Premium,0.0,inf,requests,2.1899999999999998e-06
+azure,uksouth,Block Blob,put request,Premium,0.0,inf,requests,2.19e-06
 azure,qatarcentral,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.198
 azure,westus3,Block Blob,put request,Premium,0.0,inf,requests,1.7500000000000002e-06
 azure,swedensouth,Block Blob v2,put request,Premium,0.0,inf,requests,3.848e-06
 azure,uksouth,Blob Storage,get request,Hot,0.0,inf,requests,4.7e-07
 azure,norwayeast,Block Blob v2,get request,Premium,0.0,inf,requests,2.6e-07
-azure,koreacentral,Block Blob,get request,Premium,0.0,inf,requests,1.8899999999999999e-07
+azure,koreacentral,Block Blob,get request,Premium,0.0,inf,requests,1.89e-07
 azure,canadacentral,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.02
 azure,canadacentral,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.0184
 azure,canadacentral,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.0192
@@ -890,9 +890,9 @@ azure,ukwest,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.188
 azure,centralus,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
 azure,switzerlandwest,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.292
 azure,australiacentral,Block Blob v2,get request,Premium,0.0,inf,requests,3.3e-07
-azure,southafricanorth,Block Blob,get request,Premium,0.0,inf,requests,2.0400000000000003e-07
+azure,southafricanorth,Block Blob,get request,Premium,0.0,inf,requests,2.0400000000000005e-07
 azure,northcentralus,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
-azure,brazilsoutheast,Block Blob v2,put request,Premium,0.0,inf,requests,5.9069999999999995e-06
+azure,brazilsoutheast,Block Blob v2,put request,Premium,0.0,inf,requests,5.907e-06
 azure,southafricanorth,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.0119
 azure,swedensouth,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.013
 azure,southeastasia,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
@@ -901,17 +901,17 @@ azure,qatarcentral,Block Blob v2,put request,Premium,0.0,inf,requests,3e-06
 azure,usgovarizona,Block Blob,get request,Premium,0.0,inf,requests,1.75e-07
 azure,attdallas1,Block Blob,get request,Premium,0.0,inf,requests,1.68e-07
 azure,westcentralus,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
-azure,usgovtexas,Block Blob v2,put request,Premium,0.0,inf,requests,2.8500000000000002e-06
+azure,usgovtexas,Block Blob v2,put request,Premium,0.0,inf,requests,2.85e-06
 azure,norwayeast,Block Blob,put request,Premium,0.0,inf,requests,2.51e-06
-azure,southindia,Block Blob,put request,Premium,0.0,inf,requests,2.6300000000000002e-06
+azure,southindia,Block Blob,put request,Premium,0.0,inf,requests,2.63e-06
 azure,Global,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0
 azure,australiasoutheast,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
-azure,norwayeast,Block Blob v2,put request,Premium,0.0,inf,requests,3.2599999999999997e-06
+azure,norwayeast,Block Blob v2,put request,Premium,0.0,inf,requests,3.26e-06
 azure,japaneast,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.02
 azure,japaneast,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.0192
 azure,japaneast,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.0184
 azure,southafricawest,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.0125
-azure,swedensouth,Blob Storage,put request,Hot,0.0,inf,requests,6.5000000000000004e-06
+azure,swedensouth,Blob Storage,put request,Hot,0.0,inf,requests,6.5e-06
 azure,southafricanorth,Blob Storage,put request,Hot,0.0,inf,requests,6e-06
 azure,usgovtexas,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
 azure,australiacentral2,Block Blob,get request,Premium,0.0,inf,requests,2.54e-07
@@ -925,7 +925,7 @@ azure,australiaeast,Block Blob v2,get request,Premium,0.0,inf,requests,2.64e-07
 azure,qatarcentral,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
 azure,southindia,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
 azure,francesouth,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.244
-azure,switzerlandwest,Blob Storage,put request,Cool,0.0,inf,requests,1.4299999999999999e-05
+azure,switzerlandwest,Blob Storage,put request,Cool,0.0,inf,requests,1.43e-05
 azure,francecentral,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0028
 azure,francecentral,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.017664
 azure,francecentral,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0192
@@ -937,7 +937,7 @@ azure,japaneast,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.011
 azure,swedensouth,Blob Storage,get request,Hot,0.0,inf,requests,5.2e-07
 azure,qatarcentral,Block Blob,get request,Premium,0.0,inf,requests,2e-07
 azure,eastasia,Block Blob v2,put request,Premium,0.0,inf,requests,3.52e-06
-azure,uaecentral,Block Blob v2,get request,Premium,0.0,inf,requests,3.0599999999999996e-07
+azure,uaecentral,Block Blob v2,get request,Premium,0.0,inf,requests,3.06e-07
 azure,attdallas1,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.18
 azure,canadacentral,Block Blob v2,get request,Premium,0.0,inf,requests,2.1800000000000002e-07
 azure,usgovvirginia,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
@@ -963,9 +963,9 @@ azure,centralindia,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
 azure,norwayeast,Blob Storage,get request,Cool,0.0,inf,requests,1.0999999999999998e-06
 azure,japaneast,Block Blob,put request,Premium,0.0,inf,requests,2.54e-06
 azure,ukwest,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0028
-azure,southcentralus,Block Blob,put request,Premium,0.0,inf,requests,2.1000000000000002e-06
+azure,southcentralus,Block Blob,put request,Premium,0.0,inf,requests,2.1e-06
 azure,westus,Block Blob,put request,Premium,0.0,inf,requests,2.28e-06
-azure,francecentral,Block Blob v2,put request,Premium,0.0,inf,requests,2.8500000000000002e-06
+azure,francecentral,Block Blob v2,put request,Premium,0.0,inf,requests,2.85e-06
 azure,australiacentral,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
 azure,francesouth,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.244
 azure,switzerlandnorth,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.011
@@ -1031,7 +1031,7 @@ azure,francesouth,Blob Storage,get request,Hot,0.0,inf,requests,6.11e-07
 azure,southafricanorth,Block Blob v2,get request,Premium,0.0,inf,requests,2.66e-07
 azure,japanwest,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
 azure,germanynorth,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.15
-azure,swedensouth,Blob Storage,put request,Cool,0.0,inf,requests,1.3000000000000001e-05
+azure,swedensouth,Blob Storage,put request,Cool,0.0,inf,requests,1.3e-05
 azure,uaenorth,Block Blob,put request,Premium,0.0,inf,requests,2.5e-06
 azure,southindia,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
 azure,usgovarizona,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.188
@@ -1058,8 +1058,8 @@ azure,northeurope,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
 azure,norwayeast,Blob Storage,put request,Hot,0.0,inf,requests,5.94e-06
 azure,francecentral,Block Blob v2,get request,Premium,0.0,inf,requests,2.28e-07
 azure,swedencentral,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.195
-azure,northeurope,Block Blob,put request,Premium,0.0,inf,requests,2.1000000000000002e-06
-azure,uaecentral,Blob Storage,put request,Cool,0.0,inf,requests,1.3000000000000001e-05
+azure,northeurope,Block Blob,put request,Premium,0.0,inf,requests,2.1e-06
+azure,uaecentral,Blob Storage,put request,Cool,0.0,inf,requests,1.3e-05
 azure,australiaeast,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.218
 azure,attatlanta1,Block Blob,get request,Premium,0.0,inf,requests,1.4e-07
 azure,uaecentral,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.279
@@ -1084,7 +1084,7 @@ azure,switzerlandnorth,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.02156
 azure,switzerlandnorth,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.020734
 azure,switzerlandnorth,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.019817
 azure,norwaywest,Block Blob,get request,Premium,0.0,inf,requests,2.6e-07
-azure,germanynorth,Block Blob v2,get request,Premium,0.0,inf,requests,2.4199999999999997e-07
+azure,germanynorth,Block Blob v2,get request,Premium,0.0,inf,requests,2.42e-07
 azure,attdallas1,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
 azure,qatarcentral,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.0184
 azure,qatarcentral,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.02
@@ -1121,14 +1121,14 @@ azure,ukwest,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.011
 azure,australiaeast,Blob Storage,put request,Hot,0.0,inf,requests,5.5e-06
 azure,canadacentral,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
 azure,canadacentral,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.011
-azure,canadacentral,Block Blob,put request,Premium,0.0,inf,requests,2.1000000000000002e-06
+azure,canadacentral,Block Blob,put request,Premium,0.0,inf,requests,2.1e-06
 azure,Global,Blob Storage,put request,Hot,0.0,inf,requests,0.0
 azure,attdallas1,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0184
 azure,southcentralus,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.016928
 azure,southcentralus,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0184
 azure,southcentralus,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.017664
 azure,brazilsoutheast,Block Blob,put request,Premium,0.0,inf,requests,4.55e-06
-azure,brazilsoutheast,Block Blob v2,get request,Premium,0.0,inf,requests,4.7149999999999995e-07
+azure,brazilsoutheast,Block Blob v2,get request,Premium,0.0,inf,requests,4.7150000000000006e-07
 azure,attatlanta1,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
 azure,southindia,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.225
 azure,southafricanorth,Block Blob,put request,Premium,0.0,inf,requests,2.555e-06
@@ -1140,10 +1140,10 @@ azure,southafricawest,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0042
 azure,usgovvirginia,Blob Storage,put request,Hot,0.0,inf,requests,5e-06
 azure,australiasoutheast,Block Blob,put request,Premium,0.0,inf,requests,2.54e-06
 azure,centralindia,Blob Storage,put request,Hot,0.0,inf,requests,5.5e-06
-azure,brazilsoutheast,Blob Storage,put request,Cool,0.0,inf,requests,1.3000000000000001e-05
+azure,brazilsoutheast,Blob Storage,put request,Cool,0.0,inf,requests,1.3e-05
 azure,uaecentral,Blob Storage,put request,Hot,0.0,inf,requests,7.02e-06
 azure,canadaeast,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
-azure,norwaywest,Blob Storage,put request,Cool,0.0,inf,requests,1.4299999999999999e-05
+azure,norwaywest,Blob Storage,put request,Cool,0.0,inf,requests,1.43e-05
 azure,eastus,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
 azure,westus2,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
 azure,uksouth,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0028
@@ -1161,7 +1161,7 @@ azure,uaecentral,Block Blob v2,put request,Premium,0.0,inf,requests,3.82e-06
 azure,jioindiawest,Blob Storage,get request,Hot,0.0,inf,requests,4.4e-07
 azure,australiasoutheast,Blob Storage,put request,Hot,0.0,inf,requests,5.5e-06
 azure,jioindiawest,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
-azure,usgovarizona,Block Blob,put request,Premium,0.0,inf,requests,2.1899999999999998e-06
+azure,usgovarizona,Block Blob,put request,Premium,0.0,inf,requests,2.19e-06
 azure,eastus2,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
 azure,uksouth,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.011
 azure,centralindia,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
@@ -1194,7 +1194,7 @@ azure,westus,Block Blob,get request,Premium,0.0,inf,requests,1.82e-07
 azure,brazilsouth,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
 azure,uaecentral,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.00325
 azure,usgovvirginia,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
-azure,ukwest,Block Blob,put request,Premium,0.0,inf,requests,2.1899999999999998e-06
+azure,ukwest,Block Blob,put request,Premium,0.0,inf,requests,2.19e-06
 azure,eastus2,Block Blob,put request,Premium,0.0,inf,requests,1.7500000000000002e-06
 azure,eastus2,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
 azure,norwaywest,Blob Storage,get request,Hot,0.0,inf,requests,6.15e-07
@@ -1208,7 +1208,7 @@ azure,australiaeast,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
 azure,swedencentral,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
 azure,southafricawest,Blob Storage,put request,Hot,0.0,inf,requests,7.499999999999999e-06
 azure,francecentral,Blob Storage,put request,Hot,0.0,inf,requests,5.899999999999999e-06
-azure,attdallas1,Block Blob,put request,Premium,0.0,inf,requests,2.1000000000000002e-06
+azure,attdallas1,Block Blob,put request,Premium,0.0,inf,requests,2.1e-06
 azure,southindia,Block Blob v2,put request,Premium,0.0,inf,requests,3.4200000000000003e-06
 azure,eastus2,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
 azure,brazilsoutheast,Blob Storage,put request,Hot,0.0,inf,requests,9.1e-06
@@ -1256,12 +1256,12 @@ azure,koreasouth,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.203
 azure,southafricawest,Blob Storage,put request,Cool,0.0,inf,requests,1.25e-05
 azure,swedencentral,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
 azure,westus2,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
-azure,australiacentral,Block Blob,put request,Premium,0.0,inf,requests,3.1699999999999997e-06
+azure,australiacentral,Block Blob,put request,Premium,0.0,inf,requests,3.17e-06
 azure,northeurope,Block Blob v2,put request,Premium,0.0,inf,requests,2.73e-06
 azure,swedencentral,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
 azure,westindia,Blob Storage,get request,Hot,0.0,inf,requests,4.4e-07
 azure,norwaywest,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.279
-azure,switzerlandnorth,Block Blob v2,get request,Premium,0.0,inf,requests,2.7299999999999997e-07
+azure,switzerlandnorth,Block Blob v2,get request,Premium,0.0,inf,requests,2.73e-07
 azure,uksouth,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.188
 azure,switzerlandwest,Blob Storage,get request,Cool,0.0,inf,requests,1.43e-06
 azure,uaenorth,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.003
@@ -1283,7 +1283,7 @@ azure,eastus2,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.15
 azure,japanwest,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
 azure,germanynorth,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.013
 azure,southeastasia,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
-azure,switzerlandnorth,Block Blob,get request,Premium,0.0,inf,requests,2.0999999999999997e-07
+azure,switzerlandnorth,Block Blob,get request,Premium,0.0,inf,requests,2.1000000000000003e-07
 azure,canadacentral,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.18
 azure,northcentralus,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.18
 azure,usgovarizona,Blob Storage,put request,Hot,0.0,inf,requests,5e-06
@@ -1315,7 +1315,7 @@ azure,canadaeast,Blob Storage,put request,Hot,0.0,inf,requests,5.5e-06
 azure,swedensouth,Block Blob v2,get request,Premium,0.0,inf,requests,3.081e-07
 azure,switzerlandnorth,Block Blob,put request,Premium,0.0,inf,requests,2.625e-06
 azure,australiacentral2,Blob Storage,put request,Hot,0.0,inf,requests,5.5e-06
-azure,westindia,Block Blob v2,get request,Premium,0.0,inf,requests,2.7299999999999997e-07
+azure,westindia,Block Blob v2,get request,Premium,0.0,inf,requests,2.73e-07
 azure,francesouth,Blob Storage,put request,Hot,0.0,inf,requests,7.670000000000001e-06
 azure,northcentralus,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.019136
 azure,northcentralus,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.019968
@@ -1345,7 +1345,7 @@ azure,canadaeast,Block Blob v2,get request,Premium,0.0,inf,requests,2.1800000000
 azure,southcentralus,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.01
 azure,brazilsoutheast,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.39
 azure,northcentralus,Block Blob v2,get request,Premium,0.0,inf,requests,2.1800000000000002e-07
-azure,southindia,Block Blob,get request,Premium,0.0,inf,requests,2.0999999999999997e-07
+azure,southindia,Block Blob,get request,Premium,0.0,inf,requests,2.1000000000000003e-07
 azure,australiaeast,Block Blob,put request,Premium,0.0,inf,requests,2.54e-06
 azure,koreasouth,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
 azure,westcentralus,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.18
@@ -1358,11 +1358,107 @@ azure,attatlanta1,Block Blob v2,get request,Premium,0.0,inf,requests,1.82e-07
 azure,southeastasia,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.0184
 azure,southeastasia,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.02
 azure,southeastasia,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.0192
-azure,switzerlandwest,Block Blob,get request,Premium,0.0,inf,requests,2.7299999999999997e-07
-azure,switzerlandnorth,Blob Storage,get request,Hot,0.0,inf,requests,4.7299999999999996e-07
+azure,switzerlandwest,Block Blob,get request,Premium,0.0,inf,requests,2.73e-07
+azure,switzerlandnorth,Blob Storage,get request,Hot,0.0,inf,requests,4.73e-07
 azure,canadacentral,Block Blob v2,put request,Premium,0.0,inf,requests,2.73e-06
 azure,Global,Blob Storage,get request,Hot,0.0,inf,requests,0.0
 azure,attdallas1,Blob Storage,get request,Hot,0.0,inf,requests,4e-07
 azure,swedensouth,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.013
 azure,westcentralus,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.01
-azure,westcentralus,Block Blob,put request,Premium,0.0,inf,requests,2.1000000000000002e-06
+azure,westcentralus,Block Blob,put request,Premium,0.0,inf,requests,2.1e-06
+gcp,asia-south2-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,asia-south2-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,asia-south2-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-south2-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,europe-north1-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,europe-north1-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,europe-north1-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,europe-north1-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,australia-southeast1-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,australia-southeast1-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,australia-southeast1-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,australia-southeast1-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,europe-west4-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,europe-west4-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,europe-west4-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,europe-west4-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,us-central1-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,us-central1-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,us-central1-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,us-central1-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,europe-west1-b,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,europe-west1-b,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,europe-west1-b,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,europe-west1-b,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,australia-southeast2-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,australia-southeast2-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,australia-southeast2-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,australia-southeast2-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,us-east1-b,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,us-east1-b,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,us-east1-b,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,us-east1-b,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,southamerica-west1-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,southamerica-west1-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,southamerica-west1-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,southamerica-west1-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-east1-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,asia-east1-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,asia-east1-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-east1-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,southamerica-east1-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,southamerica-east1-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,southamerica-east1-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,southamerica-east1-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-northeast2-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,asia-northeast2-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,asia-northeast2-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-northeast2-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-southeast2-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,asia-southeast2-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,asia-southeast2-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-southeast2-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,europe-west2-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,europe-west2-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,europe-west2-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,europe-west2-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-east2-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,asia-east2-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,asia-east2-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-east2-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-south1-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,asia-south1-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,asia-south1-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-south1-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,europe-west6-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,europe-west6-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,europe-west6-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,europe-west6-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,us-west1-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,us-west1-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,us-west1-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,us-west1-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,europe-west3-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,europe-west3-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,europe-west3-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,europe-west3-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-northeast3-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,asia-northeast3-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,asia-northeast3-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-northeast3-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,me-west1-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,me-west1-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,me-west1-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,me-west1-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-southeast1-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,asia-southeast1-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,asia-southeast1-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-southeast1-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,us-east4-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,us-east4-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,us-east4-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,us-east4-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,us-west4-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,us-west4-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,us-west4-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,us-west4-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0

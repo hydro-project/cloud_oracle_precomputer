@@ -95,7 +95,7 @@ class Experiment:
     use_clarkson: bool = False
     output_candidates: bool = False
     latency_slo: float = None
-    latency_file: str = "/dev/null"
+    latency_file: str = None
 
     def __post_init__(self):
         
@@ -146,7 +146,6 @@ async def precomputation(*, e: Experiment):
         "batch-size": e.batch_size,
         "network-file": f"{e.data_dir}/network_cost_v2.csv",
         "object-store-file": f"{e.data_dir}/storage_pricing.csv",
-        "latency-file": e.latency_file,
         "redundancy-elimination-workers": e.redundancy_elimination_workers,
         #"output_candidates": ""
         "experiment-name": e.experiment_dir_full,
@@ -155,8 +154,9 @@ async def precomputation(*, e: Experiment):
         "optimizer": e.optimizer,
     }
 
-    if e.latency_slo is not None:
+    if e.latency_slo is not None and e.latency_file is not None:
         args["latency-slo"] = e.latency_slo
+        args["latency-file"] = e.latency_file
 
 
     # Convert args to a list of strings with --key=value format
@@ -424,8 +424,9 @@ def build_skystore_experiments(*, latency_slos=[2.0, 4.0, 8.0]):
         latency_file = os.path.join(os.getcwd(), "latency_41943040.csv")
     )
     
-    scaling = Experiment(region_selector="aws", **fixed_args, replication_factor=8).as_args(key="latency_slo", args=latency_slos) + \
-        Experiment(region_selector="aws", **fixed_args, replication_factor=10).as_args(key="latency_slo", args=latency_slos)
+    scaling = [Experiment(region_selector="gcp", **fixed_args, replication_factor=1)] #.as_args(key="latency_slo", args=latency_slos)
+        #Experiment(region_selector="aws", **fixed_args, replication_factor=8).as_args(key="latency_slo", args=latency_slos) + \
+        #Experiment(region_selector="aws", **fixed_args, replication_factor=10).as_args(key="latency_slo", args=latency_slos)
         #Experiment(region_selector="aws", **fixed_args, replication_factor=1).as_args(key="latency_slo", args=latency_slos) + \
         #Experiment(region_selector="aws", **fixed_args, replication_factor=3).as_args(key="latency_slo", args=latency_slos) + \
         #Experiment(region_selector="aws", **fixed_args, replication_factor=5).as_args(key="latency_slo", args=latency_slos)
