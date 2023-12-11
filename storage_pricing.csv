@@ -594,7 +594,7 @@ azure,eastus2,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.017664
 azure,eastus2,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0184
 azure,eastus2,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.016928
 azure,usgovtexas,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
-azure,westindia,Block Blob,get request,Premium,0.0,inf,requests,2.1000000000000003e-07
+azure,westindia,Block Blob,get request,Premium,0.0,inf,requests,2.1000000000000005e-07
 azure,westeurope,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0196
 azure,westeurope,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.018816
 azure,westeurope,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.018032
@@ -1128,7 +1128,7 @@ azure,southcentralus,Blob Storage,storage,Hot,512000.0,inf,1 GB/Month,0.016928
 azure,southcentralus,Blob Storage,storage,Hot,0.0,inf,1 GB/Month,0.0184
 azure,southcentralus,Blob Storage,storage,Hot,51200.0,inf,1 GB/Month,0.017664
 azure,brazilsoutheast,Block Blob,put request,Premium,0.0,inf,requests,4.55e-06
-azure,brazilsoutheast,Block Blob v2,get request,Premium,0.0,inf,requests,4.7150000000000006e-07
+azure,brazilsoutheast,Block Blob v2,get request,Premium,0.0,inf,requests,4.715000000000001e-07
 azure,attatlanta1,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.01
 azure,southindia,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.225
 azure,southafricanorth,Block Blob,put request,Premium,0.0,inf,requests,2.555e-06
@@ -1283,7 +1283,7 @@ azure,eastus2,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.15
 azure,japanwest,Blob Storage,get request,Cool,0.0,inf,requests,1e-06
 azure,germanynorth,Blob Storage,get transfer,Cool,0.0,inf,1 GB,0.013
 azure,southeastasia,Blob Storage,put transfer,Cool,0.0,inf,1 GB,0.0025
-azure,switzerlandnorth,Block Blob,get request,Premium,0.0,inf,requests,2.1000000000000003e-07
+azure,switzerlandnorth,Block Blob,get request,Premium,0.0,inf,requests,2.1000000000000005e-07
 azure,canadacentral,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.18
 azure,northcentralus,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.18
 azure,usgovarizona,Blob Storage,put request,Hot,0.0,inf,requests,5e-06
@@ -1345,7 +1345,7 @@ azure,canadaeast,Block Blob v2,get request,Premium,0.0,inf,requests,2.1800000000
 azure,southcentralus,Blob Storage,storage,Cool,0.0,inf,1 GB/Month,0.01
 azure,brazilsoutheast,Block Blob,storage,Premium,0.0,inf,1 GB/Month,0.39
 azure,northcentralus,Block Blob v2,get request,Premium,0.0,inf,requests,2.1800000000000002e-07
-azure,southindia,Block Blob,get request,Premium,0.0,inf,requests,2.1000000000000003e-07
+azure,southindia,Block Blob,get request,Premium,0.0,inf,requests,2.1000000000000005e-07
 azure,australiaeast,Block Blob,put request,Premium,0.0,inf,requests,2.54e-06
 azure,koreasouth,Blob Storage,put request,Cool,0.0,inf,requests,1e-05
 azure,westcentralus,Block Blob v2,storage,Premium,0.0,inf,1 GB/Month,0.18
@@ -1458,6 +1458,126 @@ gcp,us-east4-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
 gcp,us-east4-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
 gcp,us-east4-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
 gcp,us-east4-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,us-west4-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,us-west4-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,us-west4-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,us-west4-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-south2-a,gcs,storage,Standard Storage,0.0,inf,,0.023
+gcp,asia-south2-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,asia-south2-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,asia-south2-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-south2-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,europe-north1-a,gcs,storage,Standard Storage,0.0,inf,,0.02
+gcp,europe-north1-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,europe-north1-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,europe-north1-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,europe-north1-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,australia-southeast1-a,gcs,storage,Standard Storage,0.0,inf,,0.023
+gcp,australia-southeast1-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,australia-southeast1-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,australia-southeast1-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,australia-southeast1-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,europe-west4-a,gcs,storage,Standard Storage,0.0,inf,,0.02
+gcp,europe-west4-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,europe-west4-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,europe-west4-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,europe-west4-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,us-central1-a,gcs,storage,Standard Storage,0.0,inf,,0.02
+gcp,us-central1-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,us-central1-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,us-central1-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,us-central1-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,europe-west1-b,gcs,storage,Standard Storage,0.0,inf,,0.02
+gcp,europe-west1-b,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,europe-west1-b,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,europe-west1-b,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,europe-west1-b,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,australia-southeast2-a,gcs,storage,Standard Storage,0.0,inf,,0.023
+gcp,australia-southeast2-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,australia-southeast2-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,australia-southeast2-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,australia-southeast2-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,us-east1-b,gcs,storage,Standard Storage,0.0,inf,,0.02
+gcp,us-east1-b,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,us-east1-b,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,us-east1-b,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,us-east1-b,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,southamerica-west1-a,gcs,storage,Standard Storage,0.0,inf,,0.03
+gcp,southamerica-west1-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,southamerica-west1-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,southamerica-west1-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,southamerica-west1-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-east1-a,gcs,storage,Standard Storage,0.0,inf,,0.02
+gcp,asia-east1-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,asia-east1-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,asia-east1-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-east1-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,southamerica-east1-a,gcs,storage,Standard Storage,0.0,inf,,0.035
+gcp,southamerica-east1-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,southamerica-east1-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,southamerica-east1-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,southamerica-east1-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-northeast2-a,gcs,storage,Standard Storage,0.0,inf,,0.023
+gcp,asia-northeast2-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,asia-northeast2-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,asia-northeast2-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-northeast2-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-southeast2-a,gcs,storage,Standard Storage,0.0,inf,,0.023
+gcp,asia-southeast2-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,asia-southeast2-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,asia-southeast2-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-southeast2-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,europe-west2-a,gcs,storage,Standard Storage,0.0,inf,,0.023
+gcp,europe-west2-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,europe-west2-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,europe-west2-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,europe-west2-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-east2-a,gcs,storage,Standard Storage,0.0,inf,,0.023
+gcp,asia-east2-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,asia-east2-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,asia-east2-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-east2-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-south1-a,gcs,storage,Standard Storage,0.0,inf,,0.023
+gcp,asia-south1-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,asia-south1-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,asia-south1-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-south1-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,europe-west6-a,gcs,storage,Standard Storage,0.0,inf,,0.025
+gcp,europe-west6-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,europe-west6-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,europe-west6-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,europe-west6-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,us-west1-a,gcs,storage,Standard Storage,0.0,inf,,0.02
+gcp,us-west1-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,us-west1-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,us-west1-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,us-west1-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,europe-west3-a,gcs,storage,Standard Storage,0.0,inf,,0.023
+gcp,europe-west3-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,europe-west3-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,europe-west3-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,europe-west3-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-northeast3-a,gcs,storage,Standard Storage,0.0,inf,,0.023
+gcp,asia-northeast3-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,asia-northeast3-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,asia-northeast3-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-northeast3-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,me-west1-a,gcs,storage,Standard Storage,0.0,inf,,0.021
+gcp,me-west1-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,me-west1-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,me-west1-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,me-west1-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-southeast1-a,gcs,storage,Standard Storage,0.0,inf,,0.02
+gcp,asia-southeast1-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,asia-southeast1-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,asia-southeast1-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,asia-southeast1-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,us-east4-a,gcs,storage,Standard Storage,0.0,inf,,0.023
+gcp,us-east4-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
+gcp,us-east4-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
+gcp,us-east4-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
+gcp,us-east4-a,gcs,put transfer,Standard Storage,0.0,inf,,0.0
+gcp,us-west4-a,gcs,storage,Standard Storage,0.0,inf,,0.023
 gcp,us-west4-a,gcs,put request,Standard Storage,0.0,inf,,5e-06
 gcp,us-west4-a,gcs,get request,Standard Storage,0.0,inf,,4.0000000000000003e-07
 gcp,us-west4-a,gcs,get transfer,Standard Storage,0.0,inf,,0.0
