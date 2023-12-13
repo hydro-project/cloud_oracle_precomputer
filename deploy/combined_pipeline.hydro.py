@@ -86,7 +86,7 @@ class Experiment:
     batch_size: int = 400
     experiment_dir: str = field(default_factory=lambda: os.path.join(os.getcwd(), "experiments"))
     hydro_dir: str = field(default_factory=lambda: os.path.join(os.getcwd(), "skypie_lib"))
-    data_dir: str = field(default_factory=os.getcwd)
+    data_dir: str = field(default_factory=lambda: os.path.join(os.getcwd(), "data"))
     profile: str = "release"
     object_store_selector: str = ""
     experiment_name: "str|None" = None
@@ -420,11 +420,13 @@ def build_skystore_experiments(*, latency_slos=[2.0, 4.0, 8.0]):
         #replication_factor = 0,
         optimizer="PrimalSimplex",
         use_clarkson=False,
-        #profile= "dev"
-        latency_file = os.path.join(os.getcwd(), "latency_41943040.csv")
+        #profile= "dev",
+        latency_file = os.path.join(os.getcwd(), "data", "latency_41943040.csv")
     )
     
-    scaling = [Experiment(region_selector="gcp", **fixed_args, replication_factor=1)] #.as_args(key="latency_slo", args=latency_slos)
+    scaling = Experiment(replication_factor=0, region_selector="aws", **fixed_args, latency_slo=latency_slos[-1]).as_args(key="replication_factor", args=[1,2,3,5,8])
+    #scaling = Experiment(replication_factor=0, region_selector="aws", **fixed_args).as_args(key="replication_factor", args=[1])
+        #[Experiment(region_selector="gcp", **fixed_args, replication_factor=1)] #.as_args(key="latency_slo", args=latency_slos)
         #Experiment(region_selector="aws", **fixed_args, replication_factor=8).as_args(key="latency_slo", args=latency_slos) + \
         #Experiment(region_selector="aws", **fixed_args, replication_factor=10).as_args(key="latency_slo", args=latency_slos)
         #Experiment(region_selector="aws", **fixed_args, replication_factor=1).as_args(key="latency_slo", args=latency_slos) + \
