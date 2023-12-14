@@ -1,7 +1,8 @@
 import os
+from typing import Tuple
 from deploy import Experiment
 
-def build_skystore_experiments(*, latency_slos=[2.0, 4.0, 8.0], replication_factors=[1,2,3,5,8], region_selectors=None):
+def build_skystore_experiments(*, latency_slos=[2.0, 4.0, 8.0], replication_factors=[1,2,3,5,8], region_selectors=None, replication_range: "Tuple[int,int]|None" = None):
     fixed_args = dict(
         experiment_dir = os.path.join(os.getcwd(), "results", "skystore"),
         batch_size = 200,
@@ -18,7 +19,10 @@ def build_skystore_experiments(*, latency_slos=[2.0, 4.0, 8.0], replication_fact
 
     for latency_slo in latency_slos:
         for region_selector in region_selectors:
-            scaling += Experiment(region_selector=region_selector, **fixed_args, latency_slo=latency_slo, replication_factor=0).as_args(key="replication_factor", args=replication_factors)
+            if replication_range is not None:
+                scaling += [Experiment(region_selector=region_selector, **fixed_args, latency_slo=latency_slo, replication_factor=replication_range[0], replication_factor_max=replication_range[1])]
+            else:
+                scaling += Experiment(region_selector=region_selector, **fixed_args, latency_slo=latency_slo, replication_factor=0).as_args(key="replication_factor", args=replication_factors)
     
     #scaling = Experiment(replication_factor=0, region_selector="aws", **fixed_args, latency_slo=latency_slos[-1]).as_args(key="replication_factor", args=replication_factors)
     #scaling = Experiment(replication_factor=0, region_selector="aws", **fixed_args).as_args(key="replication_factor", args=[1])
@@ -34,6 +38,6 @@ def build_skystore_experiments(*, latency_slos=[2.0, 4.0, 8.0], replication_fact
     return scaling
 
 named_experiments = {
-    "slos_aws": lambda: build_skystore_experiments(latency_slos=[8.0], replication_factors=[1,2,3,5,8], region_selectors=["aws"]),
-    "no_slo": lambda: build_skystore_experiments(latency_slos=[None], replication_factors=[1,2,3,5,8], region_selectors=["aws"]),
+    "slos_aws": lambda: build_skystore_experiments(latency_slos=[6.0], replication_range=(1,5), region_selectors=["aws"]),
+    "no_slo_aws": lambda: build_skystore_experiments(latency_slos=[None], replication_range=(1,5), region_selectors=["aws"]),
 }

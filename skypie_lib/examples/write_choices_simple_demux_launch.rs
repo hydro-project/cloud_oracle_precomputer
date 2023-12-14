@@ -71,6 +71,7 @@ async fn main() {
 
     let object_stores = loader.object_stores;
     let replication_factor = args.replication_factor;
+    let replication_factor_max = args.replication_factor_max.unwrap_or(replication_factor);
     let redundancy_elimination_workers: u32 = args.redundancy_elimination_workers;
 
     let mut output_monitor = MonitorMovingAverage::new(1000);
@@ -78,9 +79,19 @@ async fn main() {
 
     let object_store_ids = object_stores.iter().map(|x| x.id).collect::<Vec<_>>();
 
-    let iter_batch_size = if args.replication_factor <= 2 {10} else {5000};
     //let iter_batch_size = 5000; //args.batch_size*20;
-    let iter = IterWrapper::new(object_store_ids, replication_factor);
+    //let iter = IterWrapper::new(object_store_ids, replication_factor);
+    let tombstone = vec![];
+    let tombstone_vec = vec![tombstone];
+    let tombstone_iter = tombstone_vec.into_iter();
+    let iter = 
+    (replication_factor..=replication_factor_max)
+    .map(move |n| object_store_ids.clone().into_iter()
+    .combinations(n))
+    .flatten()
+    .chain(tombstone_iter);
+    
+    let iter_batch_size = if args.replication_factor <= 2 {10} else {5000};
     let combo_batches_stream = iter_stream_batches(iter, iter_batch_size);
 
     let flow = hydroflow_syntax! {

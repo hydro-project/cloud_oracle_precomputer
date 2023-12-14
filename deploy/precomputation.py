@@ -31,6 +31,9 @@ async def precomputation(*, e: Experiment):
         args["latency-slo"] = e.latency_slo
         args["latency-file"] = e.latency_file
 
+    if e.replication_factor_max is not None:
+        args["replication-factor-max"] = e.replication_factor_max
+
 
     # Convert args to a list of strings with --key=value format
     args = [f"--{key}={value}" for key, value in args.items()]

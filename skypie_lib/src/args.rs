@@ -15,6 +15,10 @@ pub struct Args {
     #[clap(long)]
     pub replication_factor: usize,
 
+    /// Maximal replication factor
+    #[clap(long)]
+    pub replication_factor_max: Option<usize>,
+
     /// Output file name
     #[clap(short = 'o', long)]
     pub output_file_name: Option<PathBuf>,
