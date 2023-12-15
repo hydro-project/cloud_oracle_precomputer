@@ -10,36 +10,6 @@ use skypie_lib::monitor::MonitorMovingAverage;
 use skypie_lib::iter_stream_batches::iter_stream_batches;
 use skypie_lib::Loader;
 
-struct IterWrapper {
-    iter: itertools::Combinations<std::vec::IntoIter<u16>>,
-    end: bool,
-}
-
-impl IterWrapper {
-    pub fn new(object_stores: Vec<u16>, n: usize) -> IterWrapper {
-        IterWrapper {
-            iter: object_stores.into_iter().combinations(n),
-            end: false,
-        }
-    }
-}
-
-impl Iterator for IterWrapper {
-    type Item = Vec<u16>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let res = self.iter.next();
-        if res.is_some() {
-            res
-        } else if !self.end {
-            self.end = true;
-            Some(vec![])
-        } else {
-            None
-        }
-    }
-}
-
 #[hydroflow::main]
 async fn main() {
     let mut ports = hydroflow::util::cli::init().await;

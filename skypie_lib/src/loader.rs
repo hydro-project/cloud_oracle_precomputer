@@ -52,7 +52,8 @@ impl Loader {
 
 
         // Load network latency and compatibility checker
-        let (network_latency, region_names, regions, network_egress, network_ingress) = if let Some(latency_file_path) = latency_file_path {
+        let (network_latency, region_names, regions, network_egress, network_ingress) = if latency_file_path.is_some() && latency_slo.is_some() {
+            let latency_file_path = latency_file_path.clone().unwrap();
             assert!(latency_file_path.exists());
 
             let (network_latency, region_names_with_latency_data) = Loader::load_latency(&latency_file_path, &region_names);

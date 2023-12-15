@@ -39,5 +39,6 @@ def build_skystore_experiments(*, latency_slos=[2.0, 4.0, 8.0], replication_fact
 
 named_experiments = {
     "slos_aws": lambda: build_skystore_experiments(latency_slos=[6.0], replication_range=(1,5), region_selectors=["aws"]),
-    "no_slo_aws": lambda: build_skystore_experiments(latency_slos=[None], replication_range=(1,5), region_selectors=["aws"]),
+    "no_slos_aws": lambda: build_skystore_experiments(latency_slos=[None], replication_range=(1,5), region_selectors=["aws"]),
+    "no_slos_aws_rep1": lambda: build_skystore_experiments(latency_slos=[None], replication_range=(1,1), region_selectors=["aws"]),
 }
