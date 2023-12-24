@@ -1,5 +1,6 @@
 import subprocess
-from skypie import *
+from skypie.precomputation.redundancy_elimination import redundancyElimination
+from skypie.precomputation.redundancy_elimination_clarkson import redundancyEliminationClarkson
 import numpy as np
 
 def load_args(*, dsize=1000, use_clarkson=False, optimizerThreads=1, verbose_=0, optimizer="PrimalSimplex"):
@@ -282,12 +283,9 @@ def redundancy_elimination_dummy(inequalities: np.array):
 
 def redundancy_elimination_test():
     coefficients = [
-        #[-3.0],
-        #[-2.0]
-        #[3, 0.5], # f_0(x,y) = 3x + .5y
-        [0.5, 3], # f_1(x,y) = .5x + 3y
-        [1.5, 1.5], # f_2(x,y) = 1.5x + 1.5y
-        [2.5, 2.4] # f_2(x,y) = 1.5x + 1.5y
+        [0.5, 1.0], # Non redundant
+        [1.0, 0.5], # Non redundant
+        [2.0, 2.0]  # Redundant
     ]
     inequalities = np.array([
         [0] + [ c*-1 for c in coefficients_i ] + [1] for coefficients_i in coefficients
