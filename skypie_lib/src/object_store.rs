@@ -61,8 +61,26 @@ impl Cost {
         *self.ingress_cost.get(&region.region).unwrap() + region.get_egress_cost(object_store_region)
     }
 
-    pub fn get_migration_cost(&self, src_region: &Region, dst_object_store: &ObjectStore) -> f64 {
-        *self.egress_cost.get(&dst_object_store.region).unwrap() + dst_object_store.cost.ingress_cost.get(src_region).unwrap()
+    pub fn get_transfer_cost(&self, src_region: &Region, dst_object_store: &ObjectStore) -> f64 {
+
+        // Cost for network egress at source object store for region of destination object store
+        let egress_cost = self.egress_cost.get(&dst_object_store.region).unwrap();
+        // Cost for network ingress at destination object store for region of source object store
+        let ingress_cost = dst_object_store.cost.ingress_cost.get(src_region).unwrap();
+
+        return egress_cost + ingress_cost;
+    }
+
+    pub fn get_migration_cost(&self, src_region: &Region, dst_object_store: &ObjectStore, object_num: u64, object_size: f64) -> f64 {
+
+        // Cost for transferring the objects from the source object store to the destination object store
+        let transfer_cost = self.get_transfer_cost(src_region, dst_object_store);
+        // Cost for putting the objects into the destination object store
+        let put_cost = dst_object_store.cost.put_cost;
+        // Cost for getting the objects from the source object store
+        let get_cost = self.get_cost;
+
+        return transfer_cost * object_size * object_num as f64 + (put_cost + get_cost) * object_num as f64;
     }
 
     pub fn compute_read_costs(&self, region: &ApplicationRegion, object_store_region: &Region, gets: f64, egress: f64) -> f64 {
@@ -270,25 +288,69 @@ impl ObjectStoreStruct {
 
     }
 
-    pub fn get_egress_cost(&self, region: &ApplicationRegion) -> f64 {
-        self.cost.get_egress_cost(region, &self.region)
+    ///    Returns the egress cost from an object store to the application region.
+    ///
+    ///    # Arguments
+    ///    - `region`: A reference to the `ApplicationRegion` representing the application region,
+    ///      which is the destination of the egress traffic.
+    ///
+    ///    # Returns
+    ///    - The egress cost as a `f64` value.
+    pub fn get_egress_cost(&self, dst_region: &ApplicationRegion) -> f64 {
+        self.cost.get_egress_cost(dst_region, &self.region)
     }
 
-    /*
-    Return the ingress costs between an object store an the application region
-    */
-    pub fn get_ingress_cost(&self, region: &ApplicationRegion) -> f64 {
-        self.cost.get_ingress_cost(region, &self.region)
+    ///    Returns the ingress cost into an object store from the application region.
+    ///
+    ///    # Arguments
+    ///    - `region`: A reference to the `ApplicationRegion` representing the application region,
+    ///      which is the source of the ingress traffic.
+    ///
+    ///    # Returns
+    ///    - The ingress cost as a `f64` value.
+    pub fn get_ingress_cost(&self, src_region: &ApplicationRegion) -> f64 {
+        self.cost.get_ingress_cost(src_region, &self.region)
     }
 
-    pub fn get_migration_cost(&self, object_store: &ObjectStore) -> f64 {
-        self.cost.get_migration_cost(&self.region, object_store)
+    /// Returns the transfer cost between this object store and the destination object store.
+    /// 
+    /// The transfer cost includes both the network cost and the retrieval cost on both sides.
+    ///
+    /// # Arguments
+    ///
+    /// * `dst_object_store` - The destination object store.
+    ///
+    /// # Returns
+    ///
+    /// The transfer cost as a `f64` value.
+    pub fn get_transfer_cost(&self, dst_object_store: &ObjectStore) -> f64 {
+        self.cost.get_transfer_cost(&self.region, dst_object_store)
+    }
+
+    /// Calculates the cost of migrating objects from one object store to another.
+    ///
+    /// This method calculates the cost of migrating a specified number of objects from the source object store to the destination object store.
+    ///
+    /// # Arguments
+    ///
+    /// * `dst_object_store`: The destination object store.
+    /// * `object_num`: The number of objects to migrate.
+    /// * `object_size`: The size of each object to migrate.
+    ///
+    /// # Returns
+    ///
+    /// The cost of migration as a floating-point number.
+    pub fn get_migration_cost(&self, dst_object_store: &ObjectStore, object_num: u64, object_size: f64) -> f64 {
+        self.cost.get_migration_cost(&self.region, dst_object_store, object_num, object_size)
     }
 
     pub fn compute_read_costs(&self, region: &ApplicationRegion, gets: f64, egress: f64) -> f64 {
         self.cost.compute_read_costs(region, &self.region, gets, egress)
     }
 
+    /// Returns the fully qualified name of the object store.
+    /// 
+    /// The fully qualified name of an object store is the name of the region concatenated with the name of the object store, separated by a hyphen.
     pub fn fully_qualified_name(&self) -> String {
         format!("{}-{}", self.region.name, self.name)
     }

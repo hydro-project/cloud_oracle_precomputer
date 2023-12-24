@@ -96,7 +96,7 @@ impl PyLoader {
             }
             // Network transfer costs from object store to object store (for migration)
             for destination in &self.object_stores {
-                let migration_cost = source.get_migration_cost(destination);
+                let migration_cost = source.get_transfer_cost(destination);
 
                 let source_name = source.fully_qualified_name();
                 let destination_name = destination.fully_qualified_name();
