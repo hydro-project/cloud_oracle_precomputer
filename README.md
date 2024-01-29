@@ -9,12 +9,11 @@ The easiest setup is via the dev. container: Clone this repo., open in VS-code, 
 The second precomputation phase (filtering non-optimal decisions via redundancy elimination) requires an ILP solver.
 Mosek is the default choice, which is an commercial solver that offers [free academic licenses](https://www.mosek.com/products/academic-licenses/). [Here is the Mosek setup guide](). Experiments for SIGMOD used this solver.
 
-Alternatively, if Mosek is not installed, we fallback to CVXPY which automatically discovers installed solvers and picks one of these, [see setup of cvxpy](https://www.cvxpy.org/install/).
+Alternatively, you can deinstall Mosek (the Python package) to fallback to CVXPY which automatically discovers installed solvers and picks one of these, [see setup of cvxpy](https://www.cvxpy.org/install/).
 
 ### Manual setup
-- Setup Rust, e.g., via rustup (for Linux/Mac: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`)
-- Install Protobuf: `bash .devcontainer/install_protobuf.sh`
-- Install Python requirements: `python3 -m pip install -r requirements.txt`
+1.  Setup Rust, e.g., via rustup (for Linux/Mac: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`)
+2. [Follow Dockerfile for further setup steps ...](.devcontainer/Dockerfile)
 
 ## Usage
 
@@ -47,5 +46,13 @@ The Python package for querying the SkyPIE Oracle has utility packages from this
 - [Baselines](./baselines/): High performance implementation of baselines in Rust with Python bindings.
 - [Serialization](./proto_messages/): Serialization of SkyPIE oracle for Rust and Python via ProtoBuf.
 
+### Install in current machine
+
+```
+python3 -m pip install -e baselines
+python3 -m pip install -e proto_messages
+```
+
+### Build packages
 The script [util/build_python_packages.sh](./util/build_python_packages.sh) builds the utility packages for Python >=3.7 and your current environment (OS and HW architecture).
-The resulting Python Wheels are stored in [target/wheels](./target/wheels/).
+The resulting Python Wheels in [target/wheels](./target/wheels/) than can be installed in any compatible environment.
