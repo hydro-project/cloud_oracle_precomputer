@@ -3,14 +3,13 @@ FROM mcr.microsoft.com/devcontainers/rust:1-1-bullseye
 USER vscode
 WORKDIR /home/vscode
 
-# Install python dependencies including pip
 # Install python environment manager
 RUN curl https://pyenv.run | bash && \
     echo 'export PATH="$HOME/.pyenv/bin:$PATH"' >> ~/.bashrc && \
     echo 'eval "$($HOME/.pyenv/bin/pyenv init -)"' >> ~/.bashrc && \
     echo 'eval "$($HOME/.pyenv/bin/pyenv init -)"' >> ~/.bashrc
 
-# Install setup python environment with optimized python
+# Install & setup python environment
 # env PYTHON_CONFIGURE_OPTS='--enable-optimizations --with-lto --enable-shared' PYTHON_CFLAGS='-march=native -mtune=native'
 RUN $HOME/.pyenv/bin/pyenv install 3.9.16  && \
     $HOME/.pyenv/bin/pyenv virtualenv 3.9.16 dev && \
@@ -23,7 +22,7 @@ RUN git clone https://github.com/hydro-project/cloud_oracle_precomputer.git
 
 WORKDIR /home/vscode/cloud_oracle_precomputer
 
-RUN git checkout dev
+#RUN git checkout dev
 
 # Install protobuf from Github
 RUN sudo bash util/install_protobuf.sh
@@ -40,7 +39,7 @@ RUN $HOME/.pyenv/shims/pip install -e baselines && \
     $HOME/.pyenv/shims/pip install -e proto_messages
 
 WORKDIR /home/vscode
-RUN sudo rm -rf cloud_oracle_precomputer
+#RUN sudo rm -rf cloud_oracle_precomputer
 
 # Install SkyPIE oracle
 RUN git clone https://github.com/hydro-project/cloud_oracle_skypie.git
@@ -49,3 +48,8 @@ RUN $HOME/.pyenv/shims/pip install -e .
 
 WORKDIR /home/vscode
 RUN sudo rm -rf cloud_oracle_skypie
+
+# Warm up the cache for the Rust build
+RUN cd cloud_oracle_precomputer && \
+    cargo build && \
+    cargo build --release
