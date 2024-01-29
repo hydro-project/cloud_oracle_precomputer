@@ -3,7 +3,11 @@ requires = ["maturin>=1,<2"]
 build-backend = "maturin"
 
 [project]
-name = "sky-pie-baselines"
+name = "skypie-baselines"
+version = "0.1"
+license = { file = "../LICENSE" }
+description = "A package utility package of baselines for SkyPIE oracles"
+authors = [{name = "Tiemo Bang", email = "doe@mail.com"}]
 requires-python = ">=3.7"
 classifiers = [
     "Programming Language :: Rust",
@@ -11,5 +15,9 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 
+[project.urls]
+Homepage = "https://github.com/hydro-project/cloud_oracle"
+
 [tool.maturin]
 features = ["pyo3/extension-module"]
+profile = "release"

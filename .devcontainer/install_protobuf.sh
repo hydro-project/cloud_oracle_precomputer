@@ -9,7 +9,7 @@ if [ "${PB_ARCH}" = "x86_64" ]; then
     #PB_ARCH="linux-x86_64"
 elif [ "${PB_ARCH}" = "aarch64" ]; then
     echo ${PB_ARCH}
-    #PB_ARCH="linux-aarch_64"
+    PB_ARCH="aarch_64"
 elif [ "${PB_ARCH}" = "arm64" ]; then
     PB_ARCH="aarch_64"
     echo ${PB_ARCH}
@@ -20,9 +20,11 @@ fi
 
 PB_URL="${PB_REL}/download/v${PB_VER}/protoc-${PB_VER}-${PB_OS}-${PB_ARCH}.zip"
 
-curl -L ${PB_URL} -o protoc.zip && \
-    unzip protoc.zip -d protoc && \
-    rm protoc.zip && \
+mkdir -p protoc && pushd protoc && \
+    curl -L ${PB_URL} -o protoc.zip && \
+    head protoc.zip && \
+    unzip protoc.zip && \
+    popd && \
     sudo mv protoc/bin/* /usr/local/bin/ && \
     sudo mv protoc/include/* /usr/local/include/ && \
     rm -rf protoc

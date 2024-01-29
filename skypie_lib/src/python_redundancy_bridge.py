@@ -1,9 +1,13 @@
 import subprocess
-from skypie.precomputation.redundancy_elimination import redundancyElimination
-from skypie.precomputation.redundancy_elimination_clarkson import redundancyEliminationClarkson
+import sys
+from skypie_redundancy_elimination import redundancyElimination, redundancyEliminationClarkson
+from skypie_redundancy_elimination.util import EnhancedJSONEncoder, createOptimizer
 import numpy as np
 
 def load_args(*, dsize=1000, use_clarkson=False, optimizerThreads=1, verbose_=0, optimizer="PrimalSimplex"):
+    """
+    Shim for loading the arguments for redundancy elimination (hiding legacy setup from Rust code)
+    """
     global algoArgs, optimizerType, useClarkson, verbose
 
     #verbose_ = 3
@@ -86,6 +90,9 @@ def get_optimizer_json():
     return (optimizerType.name, json.dumps(optimizerType, cls=EnhancedJSONEncoder))
 
 def redundancy_elimination(inequalities: np.array):
+    """
+    Wrapper for redundancy elimination, picking implementation according to loaded arguments.
+    """
     # , useClarkson: bool, algoArgs: Dict[Any, Any]
 
     global algoArgs, optimizerType, useClarkson, verbose
@@ -127,6 +134,9 @@ def redundancy_elimination(inequalities: np.array):
 
 from fractions import Fraction
 def redundancy_elimination_lrs(inequalities: np.array):
+    """
+    Experimental integration of exact redundancy elimination of lrslib (using rational numbers)
+    """
 
     global verbose
 
@@ -201,6 +211,9 @@ begin
 import tempfile
 cdd_temp_file = tempfile.NamedTemporaryFile(delete=True, mode="w+")
 def redundancy_elimination_cdd(inequalities: np.array):
+    """
+    Experimental integration of exact redundancy elimination of cddlib (using mixed precision)
+    """
 
     global verbose
 
@@ -311,6 +324,6 @@ if __name__ == "__main__":
     redundancy_elimination_test()
 
     # lrs
-    load_args(use_clarkson=False, optimizer="lrs")
-    print(get_optimizer_json())
-    redundancy_elimination_test()
+    #load_args(use_clarkson=False, optimizer="lrs")
+    #print(get_optimizer_json())
+    #redundancy_elimination_test()
