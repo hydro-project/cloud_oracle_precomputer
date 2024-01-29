@@ -1,0 +1,6 @@
+#export DYLD_LIBRARY_PATH=$HOME/miniconda3/envs/torch/lib:$DYLD_LIBRARY_PATH
+#export DYLD_LIBRARY_PATH="$CONDA_PREFIX/lib:$DYLD_LIBRARY_PATH"
+#export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$HOME/miniconda3/envs/torch/lib
+#export DYLD_LIBRARY_PATH="$CONDA_PREFIX/lib:$CONDA_PREFIX/include:$DYLD_LIBRARY_PATH"
+#export PATH="$CONDA_PREFIX/bin:$PATH"
+export RUSTFLAGS="-C link-args=-Wl,-rpath,$CONDA_PREFIX/lib"

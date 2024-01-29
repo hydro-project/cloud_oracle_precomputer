@@ -1,0 +1,10 @@
+syntax = "proto3";
+package skypie;
+
+import "google/protobuf/wrappers.proto";
+import "tier_advise.proto";
+
+message Wrapper {
+    // google.protobuf.StringValue args = 1;
+    TierAdvise tier_advise = 2;
+}

@@ -1,0 +1,2 @@
+hydro-deploy==0.5.0
+./python_redundancy_elimination

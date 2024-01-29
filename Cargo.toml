@@ -1,19 +1,22 @@
-[package]
-name = "sky-pie-precomputer"
-version = "0.1.0"
-edition = "2021"
+[workspace]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+members = [
+    "proto_messages",
+    "skypie_lib",
+    "baselines"
+]
 
-[dependencies]
-clap = { version = "4.0.29", features = [ "derive" ] }
-hydroflow = { git = "https://github.com/hydro-project/hydroflow"}
-serde = { version = "1", features = [ "derive" ] }
-chrono = { version = "0.4.20", features = [ "serde" ], default-features = true }
-csv = "1.1"
-itertools = "0.10.5"
-regex = "1.5.4"
-tokio = { version = "1", features = ["full"] }
+resolver = "2"
 
-[dev-dependencies]
-criterion = "0.3"
+[profile.release]
+strip = true      # Strip symbols from the binary
+# Previously this was "z" to minimize docker binary size while sacrificing performance. But "z"
+# doesn't make things that much smaller, `strip` is far more important for binary size. Use "3" for
+# performance.
+opt-level = 3
+lto = "fat"
+
+[profile.profile]
+inherits = "release"
+debug = 2
+strip = "none"

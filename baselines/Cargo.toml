@@ -1,0 +1,20 @@
+[package]
+name = "sky-pie-baselines"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+# "cdylib" is necessary to produce a shared library for Python to import from.
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.20", features = ["abi3-py37"] }
+sky-pie-precomputer = {path = "../skypie_lib"}
+ndarray = "0.15.6"
+itertools = "0.11.0"
+rayon = "1.7"
+
+[lib]
+name = "sky_pie_baselines"
+path = "src/sky_pie_baselines.rs"

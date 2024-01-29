@@ -1,0 +1,7 @@
+syntax = "proto3";
+package skypie;
+
+message Assignment {
+    string app = 1;
+    string object_store = 2;
+}

@@ -1,1 +1,6 @@
 /target
+.hydro/
+results/
+__pycache__
+build/
+python_redundancy_elimination/src/skypie_redundancy_elimination.egg-info/

@@ -1,0 +1,15 @@
+syntax = "proto3";
+package skypie;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+import "scheme.proto";
+
+message Decision {
+    // Name of field in serialization
+    Scheme replication_scheme = 1;
+    repeated google.protobuf.DoubleValue cost_wl_halfplane = 2;
+    // Seconds with unix epoch
+    google.protobuf.UInt64Value timestamp = 3;
+    google.protobuf.UInt64Value timestamp_subsec_nanos = 4;
+}

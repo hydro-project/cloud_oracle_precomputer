@@ -1,0 +1,26 @@
+syntax = "proto3";
+package skypie;
+
+import "google/protobuf/wrappers.proto";
+import "optimal_by_optimizer.proto";
+
+message Run {
+    //google.protobuf.Int64Value avg_degeneracy = 1;
+    google.protobuf.Int64Value enumerator_time_ns = 2;
+    //google.protobuf.Int64Value max_degeneracy = 3;
+    google.protobuf.UInt64Value max_replication_factor = 4;
+    google.protobuf.UInt64Value min_replication_factor = 5;
+    google.protobuf.Int64Value no_app_regions = 6;
+    //google.protobuf.Int64Value no_degeneracies = 7;
+    google.protobuf.Int64Value no_dimensions = 8;
+    google.protobuf.Int64Value no_facets = 9;
+    google.protobuf.Int64Value no_object_stores = 10;
+    //google.protobuf.Int64Value no_redundant_facets = 11;
+    //google.protobuf.Int64Value no_replication_schemes = 12;
+    //google.protobuf.Int64Value no_ridges = 13;
+    //google.protobuf.Int64Value no_vertices = 14;
+    google.protobuf.Int64Value partitioner_time_ns = 15;
+    repeated string object_stores_considered = 16;
+    repeated google.protobuf.StringValue candidate_partitions = 17;
+    map<string, OptimalByOptimizer> optimal_partitions_by_optimizer = 18;
+}
