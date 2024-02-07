@@ -53,11 +53,11 @@ impl PyLoader {
     }
     
     pub fn put_price(&self) -> HashMap<String, f64> {
-        self.object_stores.iter().map(|o| (o.fully_qualified_name(), o.cost.get_cost)).collect::<HashMap<_,_>>()
+        self.object_stores.iter().map(|o| (o.fully_qualified_name(), o.cost.put_cost)).collect::<HashMap<_,_>>()
     }
 
     pub fn storage_price(&self) -> HashMap<String, f64> {
-        self.object_stores.iter().map(|o| (o.fully_qualified_name(), o.cost.get_cost)).collect::<HashMap<_,_>>()
+        self.object_stores.iter().map(|o| (o.fully_qualified_name(), o.cost.size_cost)).collect::<HashMap<_,_>>()
     }
 
     pub fn network_price(&self) -> HashMap<String, HashMap<String, f64>> {
@@ -99,5 +99,13 @@ impl PyLoader {
 
     pub fn object_store_names(&self) -> Vec<String> {
         self.object_stores.iter().map(|o| o.fully_qualified_name()).collect::<Vec<_>>()
+    }
+
+    fn __repr__(&self) -> String {
+        format!("{:?}", self)
+    }
+
+    fn __str__(&self) -> String {
+        self.__repr__()
     }
 }
