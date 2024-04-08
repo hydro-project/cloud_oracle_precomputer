@@ -10,7 +10,8 @@ pub(crate) trait Optimizer {
         object_stores_considered: Vec<&str>,
         application_regions_considered: HashMap<&str,u16>,
         latency_file_path: Option<&str>,
-        latency_slo: &Option<f64>
+        latency_slo: &Option<f64>,
+        verbose: Option<i32>
     ) -> Loader {
 
         let network_file = PathBuf::from(network_file);
@@ -19,7 +20,7 @@ pub(crate) trait Optimizer {
         let region_list = application_regions_considered.into_iter().map(|(name, id)| Region{id, name: name.to_string()}).collect::<Vec<_>>();
         let latency_file_path = latency_file_path.as_ref().map(|s| PathBuf::from(s));
         
-        let loader = Loader::with_region_and_object_store_names(&network_file, &object_store_file, region_list, &object_stores_considered, &latency_file_path, latency_slo);
+        let loader = Loader::with_region_and_object_store_names(&network_file, &object_store_file, region_list, &object_stores_considered, &latency_file_path, latency_slo, verbose);
         
         loader
     }

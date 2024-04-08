@@ -16,17 +16,18 @@ pub struct Loader {
 }
 
 impl Loader {
-    pub fn with_region_and_object_store_names(network_file_path: &PathBuf, object_store_file_path: &PathBuf, region_list: Vec<Region>, object_store_list: &Vec<String>, latency_file_path: &Option<PathBuf>, latency_slo: &Option<f64>) -> Self {
-        Loader::load(network_file_path, object_store_file_path, None, None, Some(region_list), Some(object_store_list), latency_file_path, latency_slo)
+    pub fn with_region_and_object_store_names(network_file_path: &PathBuf, object_store_file_path: &PathBuf, region_list: Vec<Region>, object_store_list: &Vec<String>, latency_file_path: &Option<PathBuf>, latency_slo: &Option<f64>, verbose: Option<i32>) -> Self {
+        Loader::load(network_file_path, object_store_file_path, None, None, Some(region_list), Some(object_store_list), latency_file_path, latency_slo, verbose)
     }
 
-    pub fn new(network_file_path: &PathBuf, object_store_file_path: &PathBuf, region_pattern: &str, object_store_pattern: &str, latency_file_path: &Option<PathBuf>, latency_slo: &Option<f64>) -> Loader {
-        Loader::load(network_file_path, object_store_file_path, Some(region_pattern), Some(object_store_pattern), None, None, latency_file_path, latency_slo)
+    pub fn new(network_file_path: &PathBuf, object_store_file_path: &PathBuf, region_pattern: &str, object_store_pattern: &str, latency_file_path: &Option<PathBuf>, latency_slo: &Option<f64>, verbose: Option<i32>) -> Loader {
+        Loader::load(network_file_path, object_store_file_path, Some(region_pattern), Some(object_store_pattern), None, None, latency_file_path, latency_slo, verbose)
     }
 
-    fn load(network_file_path: &PathBuf, object_store_file_path: &PathBuf, region_pattern: Option<&str>, object_store_pattern: Option<&str>, region_list: Option<Vec<Region>>, object_store_list: Option<&Vec<String>>, latency_file_path: &Option<PathBuf>, latency_slo: &Option<f64>) -> Loader {
+    fn load(network_file_path: &PathBuf, object_store_file_path: &PathBuf, region_pattern: Option<&str>, object_store_pattern: Option<&str>, region_list: Option<Vec<Region>>, object_store_list: Option<&Vec<String>>, latency_file_path: &Option<PathBuf>, latency_slo: &Option<f64>, verbose: Option<i32>) -> Loader {
 
-        let (network_egress, regions, region_names) = Loader::load_network(network_file_path, region_pattern, region_list);
+        let verbose = verbose.unwrap_or(0);
+        let (network_egress, regions, region_names) = Loader::load_network(network_file_path, region_pattern, region_list, Some(verbose));
         
         // Load network ingress costs, currently 0.0
         let network_ingress = network_egress
@@ -56,7 +57,7 @@ impl Loader {
             let latency_file_path = latency_file_path.clone().unwrap();
             assert!(latency_file_path.exists());
 
-            let (network_latency, region_names_with_latency_data) = Loader::load_latency(&latency_file_path, &region_names);
+            let (network_latency, region_names_with_latency_data) = Loader::load_latency(&latency_file_path, &region_names, Some(verbose));
 
             // Align network regions with regions that have latency data: filter out regions without latency data and update region IDs
             let network_egress = network_egress.into_iter().filter(|(region, _costs)|region_names_with_latency_data.contains_key(&region.name)).map(|(region, costs)|{
@@ -97,7 +98,7 @@ impl Loader {
         let compatibility_checker = Self::load_compatibility_checker(network_latency.clone(), latency_slo);
         
         
-        let object_stores = Loader::load_object_stores(object_store_file_path, &network_egress, &network_ingress, &region_names, object_store_pattern, object_store_list);
+        let object_stores = Loader::load_object_stores(object_store_file_path, &network_egress, &network_ingress, &region_names, object_store_pattern, object_store_list, Some(verbose));
 
         assert!(object_stores.len() > 0);
 
@@ -124,7 +125,9 @@ impl Loader {
             }
         } */
         
-        println!("Number of object stores: {}, number of regions: {}", object_stores.len(), app_regions.len());
+        if verbose > 1 {
+            println!("Number of object stores: {}, number of regions: {}", object_stores.len(), app_regions.len());
+        }
 
         Loader {
             object_stores,
@@ -136,9 +139,12 @@ impl Loader {
 
     pub fn load_latency(
         latency_file_path: &PathBuf,
-        region_names: &HashMap<String, Region>
+        region_names: &HashMap<String, Region>,
+        verbose: Option<i32>
     ) -> (LatencyMaps, HashMap<String, Region>) {
 
+        let verbose = verbose.unwrap_or(0);
+        
         let rdr2 = csv::Reader::from_path(latency_file_path).unwrap();
         let iter2: csv::DeserializeRecordsIntoIter<std::fs::File, LatencyRecordRaw> =
             rdr2.into_deserialize();
@@ -168,10 +174,10 @@ impl Loader {
                 region_names.values().filter(|r2|network_latency.contains_key(r) && ! network_latency.get(r).unwrap().contains_key(r2)).map(|x|(r.clone(), x.clone()))
             }).collect_vec();
         
-        if missing_source_latency.len() > 0 {
+        if missing_source_latency.len() > 0 && verbose > 0 {
             println!("Missing source latency for regions: {:?}", missing_source_latency);
         }
-        if missing_source_dest_latency.len() > 0 {
+        if missing_source_dest_latency.len() > 0 && verbose > 0 {
             println!("Missing source/dest latency for regions: {:?}", missing_source_dest_latency);
         }
 
@@ -219,8 +225,11 @@ impl Loader {
         network_file_path: &PathBuf,
         region_pattern: Option<&str>,
         region_list: Option<Vec<Region>>,
+        verbose: Option<i32>
     ) -> (NetworkCostMaps, Vec<Region>, HashMap<String, Region>) {
         
+        let verbose = verbose.unwrap_or(0);
+
         let regions = if let Some(region_pattern) = region_pattern {
 
             let re = Regex::new(region_pattern).unwrap();
@@ -308,7 +317,7 @@ impl Loader {
         let max = regions.iter().map(|r|r.get_id()).max().unwrap();
         let unique = regions.iter().map(|r|r.get_id()).unique().collect_vec().len();
 
-        if regions.len() != unique {
+        if regions.len() != unique && verbose > 0 {
             for r in &regions {
                 println!("Region: {:?}", r);
             }
@@ -324,7 +333,9 @@ impl Loader {
         return (network_costs, regions, region_names);
     }
 
-    fn load_object_stores(object_store_file_path: &PathBuf, egress_costs: &NetworkCostMaps, ingress_costs: &NetworkCostMaps, region_names: &HashMap<String, Region>, object_store_pattern: Option<&str>, object_store_list: Option<&Vec<String>>) -> Vec<ObjectStore> {
+    fn load_object_stores(object_store_file_path: &PathBuf, egress_costs: &NetworkCostMaps, ingress_costs: &NetworkCostMaps, region_names: &HashMap<String, Region>, object_store_pattern: Option<&str>, object_store_list: Option<&Vec<String>>, verbose: Option<i32>) -> Vec<ObjectStore> {
+        let verbose = verbose.unwrap_or(0);
+
         let object_store_regex = if object_store_list.is_none() {
             Regex::new(object_store_pattern.unwrap_or("")).unwrap()
         } else {
@@ -354,7 +365,7 @@ impl Loader {
                 let key = format!("{}-{}", name, region_name);
 
                 // Set region with correct id
-                if !region_names.contains_key(&region_name) {
+                if !region_names.contains_key(&region_name) && verbose > 0 {
                     println!("WARN: Region {:?} not found, skipping object store: {}", region_name, key);
                 }
                 else {
@@ -375,7 +386,9 @@ impl Loader {
                 if egress_costs.contains_key(&x.region) && ingress_costs.contains_key(&x.region) {
                     //println!("Found network costs for {:?}, in {:?}", x.name, x.region);
                 } else {
-                    println!("WARN: No network costs for {:?}, in {:?}", x.name, x.region);
+                    if verbose > 0 {
+                        println!("WARN: No network costs for {:?}, in {:?}", x.name, x.region);
+                    }
                 }
             })
             .filter(|x| egress_costs.contains_key(&x.region) && ingress_costs.contains_key(&x.region))
@@ -397,7 +410,7 @@ impl Loader {
                 let region_egress_costs = x.cost.get_egress_cost(&app_region, &x.region);
                 debug_assert_eq!(region_egress_costs, x.cost.get_transfer);
                 let region_ingress_costs = x.cost.get_ingress_cost(&app_region, &x.region);
-                if region_ingress_costs != x.cost.put_transfer {
+                if region_ingress_costs != x.cost.put_transfer && verbose > 1 {
                     println!("WARN: Region ingress costs {:?} != put transfer costs {:?} for object store {:?}", region_ingress_costs, x.cost.put_transfer, x);
                 }
                 debug_assert_eq!(region_ingress_costs, x.cost.put_transfer);
@@ -412,7 +425,7 @@ impl Loader {
         let max = object_stores.iter().map(|r|r.get_id()).max().unwrap();
         let unique = object_stores.iter().map(|r|r.get_id()).unique().collect_vec().len();
 
-        if object_stores.len() != unique {
+        if object_stores.len() != unique && verbose > 0 {
             for r in &object_stores {
                 println!("Object store: {:?}", r);
             }

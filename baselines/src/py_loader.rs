@@ -25,17 +25,18 @@ impl Optimizer for PyLoader {
 #[pymethods]
 impl PyLoader {
     #[new]
-    #[pyo3(signature = (network_file, object_store_file, object_stores_considered, application_regions_considered, latency_file_path = None, latency_slo = None))]
+    #[pyo3(signature = (network_file, object_store_file, object_stores_considered, application_regions_considered, latency_file_path = None, latency_slo = None, verbose = None))]
     pub fn new(
         network_file: &str,
         object_store_file: &str,
         object_stores_considered: Vec<&str>,
         application_regions_considered: HashMap<&str,u16>,
         latency_file_path: Option<&str>,
-        latency_slo: Option<f64>
+        latency_slo: Option<f64>,
+        verbose: Option<i32>
     ) -> Self {
 
-        let loader = Self::load(network_file, object_store_file, object_stores_considered, application_regions_considered, latency_file_path, &latency_slo);
+        let loader = Self::load(network_file, object_store_file, object_stores_considered, application_regions_considered, latency_file_path, &latency_slo, verbose);
 
         let network_latency = loader.network_latency.iter()
             .map(|(r, l)| (r.name.clone(), l.iter().map(|(r, l)| (r.name.clone(), *l)).collect::<HashMap<_,_>>()))
