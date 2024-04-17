@@ -1,5 +1,7 @@
 use pyo3::prelude::*;
 use std::collections::HashMap;
+use skypie_lib::Loader;
+use std::path::PathBuf;
 
 use skypie_lib::{
     object_store::ObjectStore, ApplicationRegion, Decision
@@ -25,7 +27,7 @@ impl Optimizer for PyLoader {
 #[pymethods]
 impl PyLoader {
     #[new]
-    #[pyo3(signature = (network_file, object_store_file, object_stores_considered, application_regions_considered, latency_file_path = None, latency_slo = None, verbose = None))]
+    #[pyo3(signature = (network_file, object_store_file, object_stores_considered, application_regions_considered, latency_file_path = None, latency_slo = None, verbose = None, region_selector = None, object_store_selector = None))]
     pub fn new(
         network_file: &str,
         object_store_file: &str,
@@ -33,10 +35,26 @@ impl PyLoader {
         application_regions_considered: HashMap<&str,u16>,
         latency_file_path: Option<&str>,
         latency_slo: Option<f64>,
-        verbose: Option<i32>
+        verbose: Option<i32>,
+        region_selector: Option<&str>,
+        object_store_selector: Option<&str>
     ) -> Self {
 
-        let loader = Self::load(network_file, object_store_file, object_stores_considered, application_regions_considered, latency_file_path, &latency_slo, verbose);
+        let loader = if object_stores_considered.is_empty() && application_regions_considered.is_empty() && region_selector.is_some() && object_store_selector.is_some() {
+            println!("No object stores or application regions considered. Falling back to all object stores and application regions.");
+
+            let network_file = PathBuf::from(network_file);
+            let object_store_file = PathBuf::from(object_store_file);
+            let latency_file_path = latency_file_path.as_ref().map(|s| PathBuf::from(s));
+            let region_selector = region_selector.unwrap();
+            let object_store_selector = object_store_selector.unwrap();
+            
+            let loader = Loader::new(&network_file, &object_store_file, &region_selector, &object_store_selector, &latency_file_path, &latency_slo, verbose);            
+            loader
+        } else {
+            let loader = Self::load(network_file, object_store_file, object_stores_considered, application_regions_considered, latency_file_path, &latency_slo, verbose);
+            loader
+        };
 
         let network_latency = loader.network_latency.iter()
             .map(|(r, l)| (r.name.clone(), l.iter().map(|(r, l)| (r.name.clone(), *l)).collect::<HashMap<_,_>>()))
