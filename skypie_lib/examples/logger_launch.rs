@@ -25,7 +25,8 @@ async fn main() {
         &args.region_selector,
         &args.object_store_selector,
         &args.latency_file,
-        &args.latency_slo
+        &args.latency_slo,
+        None,
     );
 
     let time_input_recv = ports

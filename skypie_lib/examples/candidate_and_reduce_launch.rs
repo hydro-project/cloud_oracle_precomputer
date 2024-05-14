@@ -38,7 +38,7 @@ async fn main() {
     // Load the input
     let args = Args::parse();
 
-    let loader = Loader::new(&args.network_file, &args.object_store_file, &args.region_selector, &args.object_store_selector, &args.latency_file, &args.latency_slo);
+    let loader = Loader::new(&args.network_file, &args.object_store_file, &args.region_selector, &args.object_store_selector, &args.latency_file, &args.latency_slo, None);
 
     // Static life time hack for hydroflow lifetime mess
     let data = Box::new(loader.app_regions);
