@@ -4,7 +4,7 @@ from deploy import Experiment
 
 def build_skystore_experiments(*, latency_slos=[2.0, 4.0, 8.0], replication_factors=[1,2,3,5,8], region_selectors=None, replication_range: "Tuple[int,int]|None" = None):
     fixed_args = dict(
-        experiment_dir = os.path.join(os.getcwd(), "results", "skystore"),
+        output_dir = os.path.join(os.getcwd(), "results", "skystore"),
         batch_size = 200,
         redundancy_elimination_workers = 80,
         #redundancy_elimination_workers = 1,
@@ -41,4 +41,5 @@ named_experiments = {
     "slos_aws": lambda: build_skystore_experiments(latency_slos=[6.0], replication_range=(1,5), region_selectors=["aws"]),
     "no_slos_aws": lambda: build_skystore_experiments(latency_slos=[None], replication_range=(1,5), region_selectors=["aws"]),
     "no_slos_aws_rep1": lambda: build_skystore_experiments(latency_slos=[None], replication_range=(1,1), region_selectors=["aws"]),
+    "no_slos_multicloud_rep1": lambda: build_skystore_experiments(latency_slos=[None], replication_range=(1,1), region_selectors=[""]),
 }

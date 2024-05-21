@@ -8,7 +8,7 @@ class Experiment:
     redundancy_elimination_workers: int
     replication_factor_max: int = None
     batch_size: int = 400
-    experiment_dir: str = field(default_factory=lambda: os.path.join(os.getcwd(), "experiments"))
+    output_dir: str = field(default_factory=lambda: os.path.join(os.getcwd(), "experiments"))
     hydro_dir: str = field(default_factory=lambda: os.path.join(os.getcwd(), "skypie_lib"))
     data_dir: str = field(default_factory=lambda: os.path.join(os.getcwd(), "data"))
     profile: str = "release"
@@ -43,7 +43,7 @@ class Experiment:
         paths = ([self.experiment_name] if self.experiment_name is not None else []) + \
             ([friendly_latency_slo] if self.latency_slo is not None else []) + \
             [friendly_region_and_object_store, f"{self.replication_factor}-{self.replication_factor_max or self.replication_factor}", str(self.redundancy_elimination_workers), str(self.batch_size), str(self.optimizer), clarkson]
-        self.experiment_dir_full = os.path.join(self.experiment_dir, *paths)
+        self.experiment_dir_full = os.path.join(self.output_dir, *paths)
 
     def copy(self, **kwargs):
         kwargs = {**self.__dict__, **kwargs}

@@ -17,7 +17,7 @@ def get_args(args):
     precomp_args.add_argument("--batch-size", type=int, help="The batch size to use for the precomputation. Defaults to all available tiers (\'\')")
     precomp_args.add_argument("--hydro-dir", type=str, help="The directory of the SkyPie precomputer hydroflow project.")
     precomp_args.add_argument("--data-dir", type=str, help="The data directory of the supplemental files.")
-    precomp_args.add_argument("--experiment-dir", type=str, help="The base directory to store the experiment results.")
+    precomp_args.add_argument("--output-dir", type=str, help="The base directory to store the experiment results.")
     precomp_args.add_argument("--profile", type=str, help="The compiler profile to use, e.g., dev or release.")
     precomp_args.add_argument("--latency-slo", type=float, help="The latency SLO to use for the precomputation.")
 

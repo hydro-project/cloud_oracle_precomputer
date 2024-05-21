@@ -5,6 +5,18 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python Debugger: Precomputer",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "deploy",
+            "args" :[
+                "--experiment", "skystore_no_slos_aws_rep1",
+                "--redundancy-elimination-workers", "1",
+                "--profile", "dev",
+                "--output-dir", "~/local_results"
+            ]
+        },
+        {
             "type": "lldb",
             "request": "launch",
             "name": "Debug executable 'sky-pie-precomputer'",
@@ -19,7 +31,8 @@
                     "kind": "bin"
                 }
             },
-            "args": ["-r=aws",
+            "args": [
+                "-r=aws",
                 "-n=network_cost_v2.csv",
                 "-s=storage_pricing.csv",
                 "-b=200",
