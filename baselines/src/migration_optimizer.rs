@@ -212,6 +212,7 @@ impl MigrationOptimizer {
         application_regions_considered: HashMap<&str, u16>,
         latency_file_path: Option<&str>,
         latency_slo: &Option<f64>,
+        verbose: Option<i32>
     ) -> Loader {
         let network_file = PathBuf::from(network_file);
         let object_store_file = PathBuf::from(object_store_file);
@@ -235,6 +236,7 @@ impl MigrationOptimizer {
             &object_stores_considered,
             &latency_file_path,
             latency_slo,
+            verbose,
         );
 
         loader
@@ -261,6 +263,7 @@ impl MigrationOptimizer {
             application_regions_considered,
             latency_file_path,
             &latency_slo,
+            Some(verbose),
         );
         let object_stores = loader
             .object_stores
