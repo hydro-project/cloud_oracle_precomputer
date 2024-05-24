@@ -1,17 +1,22 @@
-use pyo3::prelude::*;
+use pyo3::{prelude::*, types::PyDict};
 use std::{collections::HashMap, path::PathBuf};
 
-use skypie_lib::{object_store::ObjectStore, Loader, Region, WriteChoice};
+use skypie_lib::{identifier::Identifier, object_store::ObjectStore, ApplicationRegion, Loader, Region, WriteChoice};
+
+use crate::workload::Workload;
+
+pub type WorkloadId = String;
 
 #[pyclass]
 #[derive(Debug)]
 pub struct MigrationOptimizer {
     /// Map of fully qualified object store names to object stores
     object_stores: HashMap<String, ObjectStore>,
+    app_regions: HashMap<String, ApplicationRegion>,
     /// Map of workload ids to the current optimization state
     ///
     /// The optimization state is a tuple of the current decision and the accumulated loss since the last migration
-    optimization_state: HashMap<u64, (WriteChoice, f64)>,
+    optimization_state: HashMap<WorkloadId, (WriteChoice, f64)>,
     verbose: i32,
 }
 
@@ -28,7 +33,7 @@ impl MigrationOptimizer {
     ///
     pub fn optimize_online_recurring(
         &mut self,
-        workload_id: u64,
+        workload_id: WorkloadId,
         opt: &WriteChoice,
         cur_cost: f64,
         opt_cost: f64,
@@ -81,6 +86,16 @@ impl MigrationOptimizer {
 
     /// Optimizes placement decision under dynamic workload via online optimization
     ///
+    /// ## Arguments
+    /// * `cur` - The object stores of the current placement decision.
+    /// * `opt` - The object stores of the currently optimal decision.
+    /// * `cur_cost` - The cost of the current decision under for this "workload tick".
+    /// * `opt_cost` - The cost of the optimal decision under for this "workload tick".
+    /// * `loss` - The accumulated loss since the last migration.
+    /// * `object_num` - The number of objects to migrate.
+    /// * `object_size` - The size of the objects to migrate.
+    /// 
+    /// ## Description
     /// This function decides wether to migrate to a new placement decision under dynamic workload via the deterministic online optimization algorithm
     /// of "Cost Optimization for Dynamic Replication and Migration of Data in Cloud Data Centers" (https://ieeexplore.ieee.org/abstract/document/7835175)
     /// This function takes in the object stores of current decision (`cur`), the object stores of the currently optimal decision (`opt`), the current cost (`cur_cost`),
@@ -90,7 +105,7 @@ impl MigrationOptimizer {
     /// It calculates the migration cost using the `minimize_migration` function and compares it with the loss and the sum of the optimized cost and migration cost.
     /// If the migration cost is less than the loss and the sum of the optimized cost and migration cost is less than the current cost,
     /// it indicates that the objects should be migrated and the loss should be reset to 0.0, returning `(true, 0.0)`.
-    /// Otherwise, it indicates that the objects should not be migrated and return the updated loss.
+    /// Otherwise, it indicates that the objects should not be migrated and returns the updated loss.
     ///
     /// ## Remarks
     ///
@@ -271,8 +286,13 @@ impl MigrationOptimizer {
             .map(|o| (o.fully_qualified_name(), o))
             .collect::<HashMap<_, _>>();
 
+        let app_regions = loader.app_regions.into_iter()
+            .map(|r| (r.region.name.clone(), r))
+            .collect::<HashMap<_, _>>();
+
         Self {
             object_stores,
+            app_regions,
             optimization_state: Default::default(),
             verbose,
         }
@@ -331,7 +351,7 @@ impl MigrationOptimizer {
     /// `vendor-region-name-tier`, e.g., `aws-us-east-1-s3-General Purpose`.
     pub fn optimize_online_recurring_by_name(
         &mut self,
-        workload_id: u64,
+        workload_id: WorkloadId,
         opt: Vec<&str>,
         cur_cost: f64,
         opt_cost: f64,
@@ -358,6 +378,43 @@ impl MigrationOptimizer {
             object_num,
             object_size,
         )
+    }
+
+    /// Compute the cost of the workload under the given placement
+    /// 
+    /// ## Arguments
+    /// * `workload` - The workload to compute the cost for.
+    /// * `write_choice` - The object stores of the placement, as fully qualitifed names.
+    /// * `read_choice` - The assigment of application regions to object stores of the placement, as dictionary of application region name and fully qualified object store name.
+    pub fn cost<'py>(&self, workload: Workload, write_choice: Vec<&str>, read_choice: &'py PyDict) -> f64 {
+        
+        let write_cost: f64 = write_choice.into_iter().map(|name|{
+            // Enfores SkyPIE's naming convention, replacing : with -
+            let name = name.replace(":", "-");
+            let object_store = self.object_stores
+                .get(&name)
+                .expect(&format!("Object store {} not found!", &name));
+
+            let cost = object_store.cost.size_cost * workload.size
+                + object_store.cost.put_cost * workload.puts;
+
+            return cost;
+        }).sum();
+
+        let read_cost: f64 = read_choice.iter().map(|(key, value)|{
+            let app_region_name = key.extract::<&str>().unwrap().replace(":", "-");
+            let object_store_name = value.extract::<&str>().unwrap().replace(":", "-");
+            let app_region = self.app_regions.get(&app_region_name).expect(format!("Application region {} not found!", &app_region_name).as_str());
+            let object_store = self.object_stores.get(&object_store_name).expect(format!("Object store {} not found!", &object_store_name).as_str());
+
+            let app_region_id = app_region.get_id() as usize;
+            let cost = object_store.get_ingress_cost(app_region) * workload.get_ingress(app_region_id)
+                + object_store.compute_read_costs(app_region, workload.get_gets(app_region_id), workload.get_egress(app_region_id));
+
+            return cost;
+        }).sum();
+
+        write_cost + read_cost
     }
 
     pub fn __repr__(&self) -> String {

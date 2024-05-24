@@ -145,7 +145,7 @@ impl Loader {
 
         let verbose = verbose.unwrap_or(0);
         
-        let rdr2 = csv::Reader::from_path(latency_file_path).unwrap();
+        let rdr2 = csv::Reader::from_path(latency_file_path).expect(format!("Failed to read latency file: {:?}", latency_file_path).as_str());
         let iter2: csv::DeserializeRecordsIntoIter<std::fs::File, LatencyRecordRaw> =
             rdr2.into_deserialize();
 
@@ -234,7 +234,7 @@ impl Loader {
 
             let re = Regex::new(region_pattern).unwrap();
             
-            let rdr2 = csv::Reader::from_path(network_file_path).unwrap();
+            let rdr2 = csv::Reader::from_path(network_file_path).expect(format!("Failed to read network file: {:?}", network_file_path).as_str());
             let iter2: csv::DeserializeRecordsIntoIter<std::fs::File, NetworkRecordRaw> =
             rdr2.into_deserialize();
             

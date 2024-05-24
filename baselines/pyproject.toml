@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "skypie-baselines"
-version = "0.2"
+version = "0.3"
 license = { file = "../LICENSE" }
 description = "A package utility package of baselines for SkyPIE oracles"
 authors = [{name = "Tiemo Bang", email = "doe@mail.com"}]
