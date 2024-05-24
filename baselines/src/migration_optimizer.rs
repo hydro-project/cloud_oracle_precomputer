@@ -1,11 +1,48 @@
 use pyo3::{prelude::*, types::PyDict};
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, ops::AddAssign, path::PathBuf};
 
 use skypie_lib::{identifier::Identifier, object_store::ObjectStore, ApplicationRegion, Loader, Region, WriteChoice};
 
 use crate::workload::Workload;
 
 pub type WorkloadId = String;
+
+#[pyclass(get_all)]
+#[derive(Debug, Clone, Default)]
+pub struct MigrationStats {
+    /// The number of migrations
+    pub migrations: u64,
+    /// The number of rejected migrations
+    pub rejected_not_worthwhile: u64,
+    pub rejected_not_robust: u64,
+    /// The number of objects migrated
+    pub objects: u64,
+}
+
+impl AddAssign for MigrationStats {
+    fn add_assign(&mut self, other: Self) {
+        self.migrations += other.migrations;
+        self.rejected_not_worthwhile += other.rejected_not_worthwhile;
+        self.rejected_not_robust += other.rejected_not_robust;
+        self.objects += other.objects;
+    }
+}
+
+#[pymethods]
+impl MigrationStats {
+    pub fn __repr__(&self) -> String {
+        format!("{:?}", self)
+    }
+
+    pub fn as_list(&self) -> Vec<(String, u64)> {
+        vec![
+            ("Migrations done".to_string(), self.migrations),
+            ("Migrated objects".to_string(), self.objects),
+            ("Migrations rejected: not worthwhile".to_string(), self.rejected_not_worthwhile),
+            ("Migrations rejected: not robust".to_string(), self.rejected_not_robust),
+        ]
+    }
+}
 
 #[pyclass]
 #[derive(Debug)]
@@ -18,6 +55,8 @@ pub struct MigrationOptimizer {
     /// The optimization state is a tuple of the current decision and the accumulated loss since the last migration
     optimization_state: HashMap<WorkloadId, (WriteChoice, f64)>,
     verbose: i32,
+    #[pyo3(get)]
+    pub stats: MigrationStats,
 }
 
 impl MigrationOptimizer {
@@ -39,6 +78,7 @@ impl MigrationOptimizer {
         opt_cost: f64,
         object_num: u64,
         object_size: f64,
+        skip_robust: bool,
     ) -> bool {
         // Retrieve the current optimization state of the workload id
         let state = self.optimization_state.get(&workload_id);
@@ -56,7 +96,7 @@ impl MigrationOptimizer {
             }
 
             // Do the online optimization with the retrieved state
-            let (migrate, loss_new) = self.optimize_online(
+            let (migrate, loss_new, stats) = self.optimize_online(
                 &cur,
                 &opt,
                 cur_cost,
@@ -64,6 +104,7 @@ impl MigrationOptimizer {
                 *loss,
                 object_num,
                 object_size,
+                skip_robust
             );
 
             // Update optimization state
@@ -74,6 +115,9 @@ impl MigrationOptimizer {
             if migrate {
                 *cur = opt.clone();
             }
+
+            // Accumulate stats
+            self.stats += stats;
 
             migrate
         } else {
@@ -124,11 +168,15 @@ impl MigrationOptimizer {
         loss: f64,
         object_num: u64,
         object_size: f64,
-    ) -> (bool, f64) {
+        skip_robust: bool,
+    ) -> (bool, f64, MigrationStats) {
         let cost_migration = self.minimize_migration(cur, opt, object_num, object_size);
 
+        let migration_worthwhile = cost_migration < loss;
+        let migration_robust = opt_cost + cost_migration < cur_cost || skip_robust;
+
         // Migration worthwhile and robust?
-        if cost_migration < loss && opt_cost + cost_migration < cur_cost {
+        let (do_migrate, loss) = if migration_worthwhile && migration_robust {
             if self.verbose > 0 {
                 println!("Migrate!");
             }
@@ -143,7 +191,23 @@ impl MigrationOptimizer {
                 }
             }
             (false, loss_new) // Do not migrate the objects and update loss
-        }
+        };
+
+        let stats = if do_migrate {
+                MigrationStats {
+                    migrations: 1,
+                    objects: object_num,
+                    ..Default::default()
+                }
+        } else {
+                MigrationStats {
+                    rejected_not_worthwhile: !migration_worthwhile as u64,
+                    rejected_not_robust: !migration_robust as u64,
+                    ..Default::default()
+                }
+        };
+
+        (do_migrate, loss, stats)
     }
 
     /// Calculates the minimum migration cost from one decision to another one.
@@ -295,6 +359,7 @@ impl MigrationOptimizer {
             app_regions,
             optimization_state: Default::default(),
             verbose,
+            stats: Default::default(),
         }
     }
 
@@ -303,7 +368,7 @@ impl MigrationOptimizer {
     /// This function is a wrapper around `optimize_online` that takes in the fully qualified object store names:
     /// `vendor-region-name-tier`, e.g., `aws-us-east-1-s3-General Purpose`.
     pub fn optimize_online_by_name(
-        &self,
+        &mut self,
         cur: Vec<&str>,
         opt: Vec<&str>,
         cur_cost: f64,
@@ -311,7 +376,8 @@ impl MigrationOptimizer {
         loss: f64,
         object_num: u64,
         object_size: f64,
-    ) -> (bool, f64) {
+        skip_robust: bool,
+    ) -> (bool, f64, MigrationStats) {
         // Translate names to object stores
         let cur = cur
             .into_iter()
@@ -342,6 +408,7 @@ impl MigrationOptimizer {
             loss,
             object_num,
             object_size,
+            skip_robust
         )
     }
 
@@ -357,6 +424,7 @@ impl MigrationOptimizer {
         opt_cost: f64,
         object_num: u64,
         object_size: f64,
+        skip_robust: bool,
     ) -> bool {
         // Translate names to object stores
         let opt = opt
@@ -377,6 +445,7 @@ impl MigrationOptimizer {
             opt_cost,
             object_num,
             object_size,
+            skip_robust
         )
     }
 
